@@ -1,0 +1,6 @@
+*.o
+*.hex
+*.map
+*.elf
+config.mk
+microbian.a
