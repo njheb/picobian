@@ -1,0 +1,6 @@
+# config.pico
+
+BOARD = pi-pico
+CHIP = cortex-m0
+MPX = mpx-m0
+LSCRIPT = RP2040.ld
