@@ -861,6 +861,7 @@ void send_ptr(int dest, int type, void *ptr)
 /* The routines here work by reconfiguring the UART, disabling
 interrupts and polling: they should be used only for debugging. */
 
+#ifdef UBIT
 /* delay_usec -- delay loop */
 static void delay_usec(int usec)
 {
@@ -871,6 +872,74 @@ static void delay_usec(int usec)
         t--;
     }
 }
+#elif defined(PI_PICO)
+/* delay_usec -- timed delay */
+static void delay_usec(unsigned usecs)
+{
+    unsigned done_l = TIMER_TIMELR + usecs; /* note that unsigned overflow is defined behavior */
+    unsigned done_h = TIMER_TIMEHR + 2;
+    /* No need to use latched accesses for the checks, since we don't care
+     * about the overall timer value, only the components individually. */
+    while (TIMER_TIMERAWL < done_l && TIMER_TIMERAWH < done_h) {
+        /* The RP2040 does not guarantee an exact clock rate, but we can
+         * nonetheless add some delay here to avoid constant timer accesses. */
+        nop(); nop(); nop(); nop();
+        nop(); nop(); nop(); nop();
+    }
+}
+#endif
+
+#ifdef PI_PICO
+void uart_set_baud(unsigned baud) {
+    unsigned baud_div = (8 * SYS_CLK_HZ / baud);
+    unsigned baud_idiv = baud_div >> 7;
+    unsigned baud_fdiv = ((baud_div & 0x7f) + 1) / 2;
+
+    if (baud_idiv < 0 || baud_idiv > 65535) {
+        panic("uart: unachievable baud rate requested: %u", baud);
+    }
+
+    UART0_IBRD = baud_idiv;
+    UART0_FBRD = baud_fdiv;
+
+    // PL011 needs a dummy write to LCR_H to latch in the divisors.
+    UART0_LCR_H = UART0_LCR_H;
+}
+/* 0 = no parity
+ * 1 = odd parity
+ * 2 = even parity */
+void uart_set_format(unsigned char data_bits, unsigned char stop_bits, unsigned char parity) {
+    unsigned char wlen =
+        data_bits == 8 ? 3 :
+        data_bits == 7 ? 2 :
+        data_bits == 6 ? 1 :
+        data_bits == 5 ? 0 :
+        (panic("uart: unsupported data bits requested: %hhu", data_bits), 0);
+    SET_FIELD(UART0_LCR_H, UART_LCR_H_WLEN, wlen);
+
+    switch (stop_bits) {
+    case 1: CLR_BIT(UART0_LCR_H, UART_LCR_H_STP2); break;
+    case 2: SET_BIT(UART0_LCR_H, UART_LCR_H_STP2); break;
+    default: panic("uart: unsupported stop bits requested: %hhu", stop_bits);
+    }
+
+    switch (parity) {
+    case 0:
+        CLR_BIT(UART0_LCR_H, UART_LCR_H_PEN);
+        break;
+    case 1:
+        SET_BIT(UART0_LCR_H, UART_LCR_H_PEN);
+        CLR_BIT(UART0_LCR_H, UART_LCR_H_EPS);
+        break;
+    case 2:
+        SET_BIT(UART0_LCR_H, UART_LCR_H_PEN);
+        SET_BIT(UART0_LCR_H, UART_LCR_H_EPS);
+        break;
+    default:
+        panic("uart: unsupported parity requested: %hhu", parity);
+    }
+}
+#endif
         
 /* kprintf_setup -- set up UART connection to host */
 static void kprintf_setup(void)
@@ -878,6 +947,7 @@ static void kprintf_setup(void)
     /* Delay so any UART activity can cease */
     delay_usec(2000);
 
+#ifdef UBIT
     /* Set up pins to maintain signal levels while UART disabled */
     gpio_dir(USB_TX, 1); gpio_dir(USB_RX, 0); gpio_out(USB_TX, 1);
 
@@ -892,14 +962,25 @@ static void kprintf_setup(void)
     UART_STARTTX = 1;
     UART_STARTRX = 1;
     UART_RXDRDY = 0;
+#elif defined(PI_PICO)
+    gpio_set_func(USB_TX, GPIO_FUNC_UART);
+    gpio_set_func(USB_RX, GPIO_FUNC_UART);
+    reset_subsystem(RESET_BIT_UART0);
+    uart_set_baud(9600);
+    uart_set_format(8, 1, 0); /* 8N1 */
+    /* Enable FIFOs */
+    SET_BIT(UART0_LCR_H, UART_LCR_H_FEN);
+    /* Enable UART */
+    UART0_CR = BIT(UART_CR_UARTEN) | BIT(UART_CR_TXE) | BIT(UART_CR_RXE);
+#endif
 }
 
 /* kputc -- send output character */
 static void kputc(char ch)
 {
-    UART_TXD = ch;
-    while (! UART_TXDRDY) { }
-    UART_TXDRDY = 0;
+    /* Wait while the TX FIFO is full */
+    while (GET_BIT(UART0_FR, UART_FR_TXFF));
+    UART0_DR = (unsigned char)ch;
 }
 
 /* kprintf_internal -- internal version of kprintf */

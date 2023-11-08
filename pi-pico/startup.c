@@ -72,6 +72,36 @@ void __reset(void)
     memcpy(__data_start, __etext, data_size);
     memset(__bss_start, 0, bss_size);
 
+    /* Enable the crystal oscillator (XOSC) */
+    _Static_assert(XOSC_HZ == 12000000);
+    XOSC_STARTUP = 48; /* sufficient startup delay */
+    XOSC_CTRL = 0xaa0 | (0xfab << 12); /* frequency range 1-15MHz, enable */
+    while (!(XOSC_STATUS >> 31)); /* spin until XOSC is stable */
+
+    /* Configure PLL SYS to be driven by XOSC at 125MHz */
+    _Static_assert(XOSC_HZ == 12000000 && SYS_CLK_HZ == 125000000);
+    PLL_SYS_PWR = 0xffffffff; /* disable PLL SYS */
+    PLL_SYS_CS = 1; /* REFDIV = 1, BYPASS = 0 */
+    PLL_SYS_FBDIV_INT = 125;
+    PLL_SYS_PRIM = (2 << 16) | (6 << 12); /* post-divider = 2*6 = 12 */
+
+    /* Drive CLK_REF by XOSC and CLK_SYS by PLL SYS. That way, we can also
+     * disable the on-chip ring oscillator (ROSC) to save power. */
+    CLOCKS_CLK_REF_CTRL = 2; /* CLK_REF SRC = xosc_clksrc */
+    /* We want to drive CLK_SYS from its aux src. This can glitch when changing,
+     * so you need to set it before switching the primary src to refer to the
+     * aux. However, the aux src we need (clksrc_pll_sys) is already selected
+     * on reset, so we can also set this in one. */
+    CLOCKS_CLK_SYS_CTRL = 1; /* CLK_SYS SRC = clksrc_clk_sys_aux */
+
+    /* Now that the important clocks are running off XOSC, we can disable
+     * ROSC to save power. */
+    SET_FIELD(ROSC_CTRL, ROSC_CTRL_ENABLE, ROSC_CTRL_ENABLE_DISABLE);
+
+    /* CLK_PERI is set up with aux src 'clk_sys' on reset, so it is already
+     * ready to go - we just need to enable it. */
+    CLOCKS_CLK_PERI_CTRL = 1 << 11; /* ENABLE */
+
     __start();
 }
 

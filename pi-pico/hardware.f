@@ -116,10 +116,36 @@ DEVICE sio {
 };
 INSTANCE sio SIO @ 0xd0000000;
 
+/* 2.13.3 */
+DEVICE resets {
+    REGISTER unsigned RESET @ 0x00;
+    REGISTER unsigned WDSEL @ 0x04;
+    REGISTER unsigned RESET_DONE @ 0x08;
+#define RESET_BIT_ADC   __BIT(0)
+#define RESET_BIT_I2C0  __BIT(3)
+#define RESET_BIT_I2C1  __BIT(4)
+#define RESET_BIT_SPI0  __BIT(16)
+#define RESET_BIT_SPI1  __BIT(17)
+#define RESET_BIT_UART0 __BIT(22)
+#define RESET_BIT_UART1 __BIT(23)
+};
+INSTANCE resets RESETS @ 0x4000c000;
+
 /* Fields for IO_*_GPIO*_CTRL registers */
 /* 2.18.6.1, 2.18.6.2 */
 /* Function Select. Values are different per-pin. 31 (0x1f) is NULL. */
 #define GPIO_CTRL_FUNCSEL __FIELD(0, 4)
+#define GPIO_FUNC_XIP  0
+#define GPIO_FUNC_SPI  1
+#define GPIO_FUNC_UART 2
+#define GPIO_FUNC_I2C  3
+#define GPIO_FUNC_PWM  4
+#define GPIO_FUNC_SIO  5
+#define GPIO_FUNC_PIO0 6
+#define GPIO_FUNC_PIO1 7
+#define GPIO_FUNC_GPCK 8
+#define GPIO_FUNC_USB  9
+#define GPIO_FUNC_NULL 0x1f
 
 /* 2.18.6.1 */
 DEVICE io_user_bank {
@@ -321,6 +347,104 @@ DEVICE pads_qspi_bank {
 INSTANCE pads_qspi_bank PADS_QSPI @ 0x40020000;
 
 
+/* 2.16.5 */
+DEVICE rosc {
+    REGISTER unsigned CTRL @ 0x00;
+#define ROSC_CTRL_ENABLE __FIELD(12, 12)
+#define ROSC_CTRL_ENABLE_DISABLE 0xd1e
+#define ROSC_CTRL_ENABLE_ENABLE 0xfab
+    REGISTER unsigned FREQA @ 0x04;
+    REGISTER unsigned FREQB @ 0x08;
+    REGISTER unsigned DORMANT @ 0x0c;
+    REGISTER unsigned DIV @ 0x10;
+    REGISTER unsigned PHASE @ 0x14;
+    REGISTER unsigned STATUS @ 0x18;
+    REGISTER unsigned RANDOMBIT @ 0x1c;
+    REGISTER unsigned COUNT @ 0x20;
+};
+INSTANCE rosc ROSC @ 0x40060000;
+
+
+/* 2.15.7 */
+DEVICE xosc {
+    REGISTER unsigned CTRL @ 0x00;
+    REGISTER unsigned STATUS @ 0x04;
+    REGISTER unsigned DORMANT @ 0x08;
+    REGISTER unsigned STARTUP @ 0x0c;
+    REGISTER unsigned DIV2 @ 0x10;
+    REGISTER unsigned PADREFCLK @ 0x14;
+    REGISTER unsigned CLKSRC @ 0x18;
+    REGISTER unsigned COUNT @ 0x1c;
+};
+INSTANCE xosc XOSC @ 0x40024000;
+
+
+/* 2.17.4 */
+DEVICE pll {
+    REGISTER unsigned CS @ 0x00;
+    REGISTER unsigned PWR @ 0x04;
+    REGISTER unsigned FBDIV_INT @ 0x08;
+    REGISTER unsigned PRIM @ 0x0c;
+};
+INSTANCE pll PLL_SYS @ 0x40028000;
+INSTANCE pll PLL_USB @ 0x4002c000;
+
+
+/* 2.14.7 */
+DEVICE clocks {
+    REGISTER unsigned CLK_GPOUT0_CTRL @ 0x00;
+    REGISTER unsigned CLK_GPOUT0_DIV @ 0x04;
+    REGISTER unsigned CLK_GPOUT0_SELECTED @ 0x08;
+    REGISTER unsigned CLK_GPOUT1_CTRL @ 0x0c;
+    REGISTER unsigned CLK_GPOUT1_DIV @ 0x10;
+    REGISTER unsigned CLK_GPOUT1_SELECTED @ 0x14;
+    REGISTER unsigned CLK_GPOUT2_CTRL @ 0x18;
+    REGISTER unsigned CLK_GPOUT2_DIV @ 0x1c;
+    REGISTER unsigned CLK_GPOUT2_SELECTED @ 0x20;
+    REGISTER unsigned CLK_GPOUT3_CTRL @ 0x24;
+    REGISTER unsigned CLK_GPOUT3_DIV @ 0x28;
+    REGISTER unsigned CLK_GPOUT3_SELECTED @ 0x2c;
+    REGISTER unsigned CLK_REF_CTRL @ 0x30;
+    REGISTER unsigned CLK_REF_DIV @ 0x34;
+    REGISTER unsigned CLK_REF_SELECTED @ 0x38;
+    REGISTER unsigned CLK_SYS_CTRL @ 0x3c;
+    REGISTER unsigned CLK_SYS_DIV @ 0x40;
+    REGISTER unsigned CLK_SYS_SELECTED @ 0x44;
+    REGISTER unsigned CLK_PERI_CTRL @ 0x48;
+    REGISTER unsigned CLK_PERI_SELECTED @ 0x50;
+    REGISTER unsigned CLK_USB_CTRL @ 0x54;
+    REGISTER unsigned CLK_USB_DIV @ 0x58;
+    REGISTER unsigned CLK_USB_SELECTED @ 0x5c;
+    REGISTER unsigned CLK_ADC_CTRL @ 0x60;
+    REGISTER unsigned CLK_ADC_DIV @ 0x64;
+    REGISTER unsigned CLK_ADC_SELECTED @ 0x68;
+    REGISTER unsigned CLK_RTC_CTRL @ 0x6c;
+    REGISTER unsigned CLK_RTC_DIV @ 0x70;
+    REGISTER unsigned CLK_RTC_SELECTED @ 0x74;
+    REGISTER unsigned CLK_SYS_RESUS_CTRL @ 0x78;
+    REGISTER unsigned CLK_SYS_RESUS_STATUS @ 0x7c;
+    REGISTER unsigned FC0_REF_KHZ @ 0x80;
+    REGISTER unsigned FC0_MIN_KHZ @ 0x84;
+    REGISTER unsigned FC0_MAX_KHZ @ 0x88;
+    REGISTER unsigned FC0_DELAY @ 0x8c;
+    REGISTER unsigned FC0_INTERVAL @ 0x90;
+    REGISTER unsigned FC0_SRC @ 0x94;
+    REGISTER unsigned FC0_STATUS @ 0x98;
+    REGISTER unsigned FC0_RESULT @ 0x9c;
+    REGISTER unsigned WAKE_EN0 @ 0xa0;
+    REGISTER unsigned WAKE_EN1 @ 0xa4;
+    REGISTER unsigned SLEEP_EN0 @ 0xa8;
+    REGISTER unsigned SLEEP_EN1 @ 0xac;
+    REGISTER unsigned ENABLED0 @ 0xb0;
+    REGISTER unsigned ENABLED1 @ 0xb4;
+    REGISTER unsigned INTR @ 0xb8;
+    REGISTER unsigned INTE @ 0xbc;
+    REGISTER unsigned INTF @ 0xc0;
+    REGISTER unsigned INTS @ 0xc4;
+};
+INSTANCE clocks CLOCKS @ 0x40008000;
+
+
 /* 4.7.5 */
 DEVICE timer {
     /* Since the timer value is 64-bit, it is accessed via a latched
@@ -401,11 +525,32 @@ DEVICE uart {
     REGISTER unsigned DR @ 0x000;
     REGISTER unsigned RSR @ 0x004;
     REGISTER unsigned FR @ 0x018;
+#define UART_FR_TXFF __BIT(5)
+#define UART_FR_RXFF __BIT(6)
     REGISTER unsigned ILPR @ 0x020;
     REGISTER unsigned IBRD @ 0x024;
     REGISTER unsigned FBRD @ 0x028;
     REGISTER unsigned LCR_H @ 0x02c;
+#define UART_LCR_H_BRK __BIT(0)
+#define UART_LCR_H_PEN __BIT(1)
+#define UART_LCR_H_EPS __BIT(2)
+#define UART_LCR_H_STP2 __BIT(3)
+#define UART_LCR_H_FEN __BIT(4)
+#define UART_LCR_H_WLEN __FIELD(5, 2)
+#define UART_LCR_H_SPS __BIT(7)
     REGISTER unsigned CR @ 0x030;
+#define UART_CR_UARTEN __BIT(0)
+#define UART_CR_SIREN  __BIT(1)
+#define UART_CR_SIRLP  __BIT(2)
+#define UART_CR_LBE    __BIT(7)
+#define UART_CR_TXE    __BIT(8)
+#define UART_CR_RXE    __BIT(9)
+#define UART_CR_DTR    __BIT(10)
+#define UART_CR_RTS    __BIT(11)
+#define UART_CR_OUT1   __BIT(12)
+#define UART_CR_OUT2   __BIT(13)
+#define UART_CR_RTSEN  __BIT(14)
+#define UART_CR_CTSEN  __BIT(15)
     REGISTER unsigned IFLS @ 0x034;
     REGISTER unsigned IMSC @ 0x038;
     REGISTER unsigned RIS @ 0x03c;
@@ -510,6 +655,20 @@ INLINE unsigned gpio_in(unsigned pin) {
     return GET_BIT(SIO_GPIO_IN, pin);
 }
 
+/* gpio_set_func -- set function of GPIO pin */
+INLINE void gpio_set_func(unsigned pin, unsigned func) {
+    volatile unsigned *gpio_ctrl = &IO_BANK0_GPIO0_CTRL + (2 * pin); /* skip STATUS registers */
+    SET_FIELD(*gpio_ctrl, GPIO_CTRL_FUNCSEL, func);
+}
+
+/* Other convenience */
+
+INLINE void reset_subsystem(unsigned bit) {
+    SET_BIT(RESETS_RESET, bit);
+    CLR_BIT(RESETS_RESET, bit);
+    while (!GET_BIT(RESETS_RESET_DONE, bit));
+}
+
 
 /* A few assembler macros for single instructions. */
 #define pause()         asm volatile ("wfe")
@@ -519,3 +678,11 @@ INLINE unsigned gpio_in(unsigned pin) {
                            asm volatile ("mrs %0, primask" : "=r" (x)); x; })
 #define set_primask(x)  asm volatile ("msr primask, %0" : : "r" (x))
 #define nop()           asm volatile ("nop")
+
+/* The rate of the crystal oscillator attached to the system (12MHz) */
+#define XOSC_HZ 12000000
+
+/* The startup.c config will configure PLL SYS appropriately to give a
+ * resulting rate of SYS_CLK_HZ. The clocks CLK_SYS and CLK_PERI are
+ * configured to also match this rate. */
+#define SYS_CLK_HZ 125000000

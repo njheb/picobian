@@ -178,7 +178,7 @@ struct buffer {
     
 /* flush -- flush a buffer by calling print_buf */
 static void flush(struct buffer *b) {
-    print_buf(b->buf, b->nbuf);
+    //print_buf(b->buf, b->nbuf);
     b->nbuf = 0;
 }
 

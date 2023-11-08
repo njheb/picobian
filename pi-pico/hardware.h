@@ -110,10 +110,34 @@ argument to be a macro that expands the a 'position, width' pair. */
 #define SIO_GPIO_HI_OE_XOR              _REG(unsigned, 0xd000004c)
     /* Further registers omitted */
 
+/* 2.13.3 */
+#define RESETS_BASE                     _BASE(0x4000c000)
+#define RESETS_RESET                    _REG(unsigned, 0x4000c000)
+#define RESETS_WDSEL                    _REG(unsigned, 0x4000c004)
+#define RESETS_RESET_DONE               _REG(unsigned, 0x4000c008)
+#define RESET_BIT_ADC   __BIT(0)
+#define RESET_BIT_I2C0  __BIT(3)
+#define RESET_BIT_I2C1  __BIT(4)
+#define RESET_BIT_SPI0  __BIT(16)
+#define RESET_BIT_SPI1  __BIT(17)
+#define RESET_BIT_UART0 __BIT(22)
+#define RESET_BIT_UART1 __BIT(23)
+
 /* Fields for IO_*_GPIO*_CTRL registers */
 /* 2.18.6.1, 2.18.6.2 */
 /* Function Select. Values are different per-pin. 31 (0x1f) is NULL. */
 #define GPIO_CTRL_FUNCSEL __FIELD(0, 4)
+#define GPIO_FUNC_XIP  0
+#define GPIO_FUNC_SPI  1
+#define GPIO_FUNC_UART 2
+#define GPIO_FUNC_I2C  3
+#define GPIO_FUNC_PWM  4
+#define GPIO_FUNC_SIO  5
+#define GPIO_FUNC_PIO0 6
+#define GPIO_FUNC_PIO1 7
+#define GPIO_FUNC_GPCK 8
+#define GPIO_FUNC_USB  9
+#define GPIO_FUNC_NULL 0x1f
 
 /* 2.18.6.1 */
 #define IO_BANK0_BASE                   _BASE(0x40014000)
@@ -307,6 +331,100 @@ argument to be a macro that expands the a 'position, width' pair. */
 #define PADS_QSPI_GPIO_QSPI_SS          _REG(unsigned, 0x40020018)
 
 
+/* 2.16.5 */
+#define ROSC_BASE                       _BASE(0x40060000)
+#define ROSC_CTRL                       _REG(unsigned, 0x40060000)
+#define ROSC_CTRL_ENABLE __FIELD(12, 12)
+#define ROSC_CTRL_ENABLE_DISABLE 0xd1e
+#define ROSC_CTRL_ENABLE_ENABLE 0xfab
+#define ROSC_FREQA                      _REG(unsigned, 0x40060004)
+#define ROSC_FREQB                      _REG(unsigned, 0x40060008)
+#define ROSC_DORMANT                    _REG(unsigned, 0x4006000c)
+#define ROSC_DIV                        _REG(unsigned, 0x40060010)
+#define ROSC_PHASE                      _REG(unsigned, 0x40060014)
+#define ROSC_STATUS                     _REG(unsigned, 0x40060018)
+#define ROSC_RANDOMBIT                  _REG(unsigned, 0x4006001c)
+#define ROSC_COUNT                      _REG(unsigned, 0x40060020)
+
+
+/* 2.15.7 */
+#define XOSC_BASE                       _BASE(0x40024000)
+#define XOSC_CTRL                       _REG(unsigned, 0x40024000)
+#define XOSC_STATUS                     _REG(unsigned, 0x40024004)
+#define XOSC_DORMANT                    _REG(unsigned, 0x40024008)
+#define XOSC_STARTUP                    _REG(unsigned, 0x4002400c)
+#define XOSC_DIV2                       _REG(unsigned, 0x40024010)
+#define XOSC_PADREFCLK                  _REG(unsigned, 0x40024014)
+#define XOSC_CLKSRC                     _REG(unsigned, 0x40024018)
+#define XOSC_COUNT                      _REG(unsigned, 0x4002401c)
+
+
+/* 2.17.4 */
+#define PLL_SYS_BASE                    _BASE(0x40028000)
+#define PLL_SYS_CS                      _REG(unsigned, 0x40028000)
+#define PLL_SYS_PWR                     _REG(unsigned, 0x40028004)
+#define PLL_SYS_FBDIV_INT               _REG(unsigned, 0x40028008)
+#define PLL_SYS_PRIM                    _REG(unsigned, 0x4002800c)
+#define PLL_USB_BASE                    _BASE(0x4002c000)
+#define PLL_USB_CS                      _REG(unsigned, 0x4002c000)
+#define PLL_USB_PWR                     _REG(unsigned, 0x4002c004)
+#define PLL_USB_FBDIV_INT               _REG(unsigned, 0x4002c008)
+#define PLL_USB_PRIM                    _REG(unsigned, 0x4002c00c)
+
+
+/* 2.14.7 */
+#define CLOCKS_BASE                     _BASE(0x40008000)
+#define CLOCKS_CLK_GPOUT0_CTRL          _REG(unsigned, 0x40008000)
+#define CLOCKS_CLK_GPOUT0_DIV           _REG(unsigned, 0x40008004)
+#define CLOCKS_CLK_GPOUT0_SELECTED      _REG(unsigned, 0x40008008)
+#define CLOCKS_CLK_GPOUT1_CTRL          _REG(unsigned, 0x4000800c)
+#define CLOCKS_CLK_GPOUT1_DIV           _REG(unsigned, 0x40008010)
+#define CLOCKS_CLK_GPOUT1_SELECTED      _REG(unsigned, 0x40008014)
+#define CLOCKS_CLK_GPOUT2_CTRL          _REG(unsigned, 0x40008018)
+#define CLOCKS_CLK_GPOUT2_DIV           _REG(unsigned, 0x4000801c)
+#define CLOCKS_CLK_GPOUT2_SELECTED      _REG(unsigned, 0x40008020)
+#define CLOCKS_CLK_GPOUT3_CTRL          _REG(unsigned, 0x40008024)
+#define CLOCKS_CLK_GPOUT3_DIV           _REG(unsigned, 0x40008028)
+#define CLOCKS_CLK_GPOUT3_SELECTED      _REG(unsigned, 0x4000802c)
+#define CLOCKS_CLK_REF_CTRL             _REG(unsigned, 0x40008030)
+#define CLOCKS_CLK_REF_DIV              _REG(unsigned, 0x40008034)
+#define CLOCKS_CLK_REF_SELECTED         _REG(unsigned, 0x40008038)
+#define CLOCKS_CLK_SYS_CTRL             _REG(unsigned, 0x4000803c)
+#define CLOCKS_CLK_SYS_DIV              _REG(unsigned, 0x40008040)
+#define CLOCKS_CLK_SYS_SELECTED         _REG(unsigned, 0x40008044)
+#define CLOCKS_CLK_PERI_CTRL            _REG(unsigned, 0x40008048)
+#define CLOCKS_CLK_PERI_SELECTED        _REG(unsigned, 0x40008050)
+#define CLOCKS_CLK_USB_CTRL             _REG(unsigned, 0x40008054)
+#define CLOCKS_CLK_USB_DIV              _REG(unsigned, 0x40008058)
+#define CLOCKS_CLK_USB_SELECTED         _REG(unsigned, 0x4000805c)
+#define CLOCKS_CLK_ADC_CTRL             _REG(unsigned, 0x40008060)
+#define CLOCKS_CLK_ADC_DIV              _REG(unsigned, 0x40008064)
+#define CLOCKS_CLK_ADC_SELECTED         _REG(unsigned, 0x40008068)
+#define CLOCKS_CLK_RTC_CTRL             _REG(unsigned, 0x4000806c)
+#define CLOCKS_CLK_RTC_DIV              _REG(unsigned, 0x40008070)
+#define CLOCKS_CLK_RTC_SELECTED         _REG(unsigned, 0x40008074)
+#define CLOCKS_CLK_SYS_RESUS_CTRL       _REG(unsigned, 0x40008078)
+#define CLOCKS_CLK_SYS_RESUS_STATUS     _REG(unsigned, 0x4000807c)
+#define CLOCKS_FC0_REF_KHZ              _REG(unsigned, 0x40008080)
+#define CLOCKS_FC0_MIN_KHZ              _REG(unsigned, 0x40008084)
+#define CLOCKS_FC0_MAX_KHZ              _REG(unsigned, 0x40008088)
+#define CLOCKS_FC0_DELAY                _REG(unsigned, 0x4000808c)
+#define CLOCKS_FC0_INTERVAL             _REG(unsigned, 0x40008090)
+#define CLOCKS_FC0_SRC                  _REG(unsigned, 0x40008094)
+#define CLOCKS_FC0_STATUS               _REG(unsigned, 0x40008098)
+#define CLOCKS_FC0_RESULT               _REG(unsigned, 0x4000809c)
+#define CLOCKS_WAKE_EN0                 _REG(unsigned, 0x400080a0)
+#define CLOCKS_WAKE_EN1                 _REG(unsigned, 0x400080a4)
+#define CLOCKS_SLEEP_EN0                _REG(unsigned, 0x400080a8)
+#define CLOCKS_SLEEP_EN1                _REG(unsigned, 0x400080ac)
+#define CLOCKS_ENABLED0                 _REG(unsigned, 0x400080b0)
+#define CLOCKS_ENABLED1                 _REG(unsigned, 0x400080b4)
+#define CLOCKS_INTR                     _REG(unsigned, 0x400080b8)
+#define CLOCKS_INTE                     _REG(unsigned, 0x400080bc)
+#define CLOCKS_INTF                     _REG(unsigned, 0x400080c0)
+#define CLOCKS_INTS                     _REG(unsigned, 0x400080c4)
+
+
 /* 4.7.5 */
 #define TIMER_BASE                      _BASE(0x40054000)
     /* Since the timer value is 64-bit, it is accessed via a latched
@@ -425,11 +543,32 @@ argument to be a macro that expands the a 'position, width' pair. */
 #define UART0_DR                        _REG(unsigned, 0x40034000)
 #define UART0_RSR                       _REG(unsigned, 0x40034004)
 #define UART0_FR                        _REG(unsigned, 0x40034018)
+#define UART_FR_TXFF __BIT(5)
+#define UART_FR_RXFF __BIT(6)
 #define UART0_ILPR                      _REG(unsigned, 0x40034020)
 #define UART0_IBRD                      _REG(unsigned, 0x40034024)
 #define UART0_FBRD                      _REG(unsigned, 0x40034028)
 #define UART0_LCR_H                     _REG(unsigned, 0x4003402c)
+#define UART_LCR_H_BRK __BIT(0)
+#define UART_LCR_H_PEN __BIT(1)
+#define UART_LCR_H_EPS __BIT(2)
+#define UART_LCR_H_STP2 __BIT(3)
+#define UART_LCR_H_FEN __BIT(4)
+#define UART_LCR_H_WLEN __FIELD(5, 2)
+#define UART_LCR_H_SPS __BIT(7)
 #define UART0_CR                        _REG(unsigned, 0x40034030)
+#define UART_CR_UARTEN __BIT(0)
+#define UART_CR_SIREN  __BIT(1)
+#define UART_CR_SIRLP  __BIT(2)
+#define UART_CR_LBE    __BIT(7)
+#define UART_CR_TXE    __BIT(8)
+#define UART_CR_RXE    __BIT(9)
+#define UART_CR_DTR    __BIT(10)
+#define UART_CR_RTS    __BIT(11)
+#define UART_CR_OUT1   __BIT(12)
+#define UART_CR_OUT2   __BIT(13)
+#define UART_CR_RTSEN  __BIT(14)
+#define UART_CR_CTSEN  __BIT(15)
 #define UART0_IFLS                      _REG(unsigned, 0x40034034)
 #define UART0_IMSC                      _REG(unsigned, 0x40034038)
 #define UART0_RIS                       _REG(unsigned, 0x4003403c)
@@ -552,6 +691,20 @@ INLINE unsigned gpio_in(unsigned pin) {
     return GET_BIT(SIO_GPIO_IN, pin);
 }
 
+/* gpio_set_func -- set function of GPIO pin */
+INLINE void gpio_set_func(unsigned pin, unsigned func) {
+    volatile unsigned *gpio_ctrl = &IO_BANK0_GPIO0_CTRL + (2 * pin); /* skip STATUS registers */
+    SET_FIELD(*gpio_ctrl, GPIO_CTRL_FUNCSEL, func);
+}
+
+/* Other convenience */
+
+INLINE void reset_subsystem(unsigned bit) {
+    SET_BIT(RESETS_RESET, bit);
+    CLR_BIT(RESETS_RESET, bit);
+    while (!GET_BIT(RESETS_RESET_DONE, bit));
+}
+
 
 /* A few assembler macros for single instructions. */
 #define pause()         asm volatile ("wfe")
@@ -561,3 +714,11 @@ INLINE unsigned gpio_in(unsigned pin) {
                            asm volatile ("mrs %0, primask" : "=r" (x)); x; })
 #define set_primask(x)  asm volatile ("msr primask, %0" : : "r" (x))
 #define nop()           asm volatile ("nop")
+
+/* The rate of the crystal oscillator attached to the system (12MHz) */
+#define XOSC_HZ 12000000
+
+/* The startup.c config will configure PLL SYS appropriately to give a
+ * resulting rate of SYS_CLK_HZ. The clocks CLK_SYS and CLK_PERI are
+ * configured to also match this rate. */
+#define SYS_CLK_HZ 125000000
