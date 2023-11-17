@@ -69,10 +69,15 @@ void __reset(void)
     int bss_size = __bss_end - __bss_start;
     memset(__bss_start, 0, bss_size);
 
-#define WANT_RESET (BIT(RESET_IO_BANK0) | BIT(RESET_IO_PADS_BANK0) | BIT(RESET_IO_PLL_SYS))
+#define WANT_RESET (BIT(RESET_IO_BANK0) | BIT(RESET_PADS_BANK0) | BIT(RESET_PLL_SYS) | BIT(RESET_TIMER))
+    RESETS_RESET = 0xffffffff;
     RESETS_RESET &= ~(unsigned)WANT_RESET;
     while (~RESETS_RESET_DONE & WANT_RESET);
 #undef WANT_RESET
+
+    /* The timer requires the watchdog tick to be running */
+    SET_FIELD(WATCHDOG_TICK, WATCHDOG_TICK_CYCLES, XOSC_HZ / 1000000);
+    SET_BIT(WATCHDOG_TICK, WATCHDOG_TICK_ENABLE);
 
     /* Enable the crystal oscillator (XOSC) */
     _Static_assert(XOSC_HZ == 12000000);

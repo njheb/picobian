@@ -965,7 +965,7 @@ static void kprintf_setup(void)
 #elif defined(PI_PICO)
     gpio_set_func(USB_TX, GPIO_FUNC_UART);
     gpio_set_func(USB_RX, GPIO_FUNC_UART);
-    reset_subsystem(RESET_BIT_UART0);
+    reset_subsystem(RESET_UART0);
     uart_set_baud(9600);
     uart_set_format(8, 1, 0); /* 8N1 */
     /* Enable FIFOs */

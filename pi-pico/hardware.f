@@ -79,25 +79,33 @@ DEVICE scb {
 INSTANCE scb SCB @ 0xe000ed00;
 
 
+/* 2.13.3 */
 DEVICE resets {
-    #define RESET_ADC           __BIT(0)
-    #define RESET_BUSCTRL       __BIT(1)
-    #define RESET_DMA           __BIT(2)
-    #define RESET_I2C0          __BIT(3)
-    #define RESET_I2C1          __BIT(4)
-    #define RESET_IO_BANK0      __BIT(5)
-    #define RESET_IO_QSPI       __BIT(6)
-    #define RESET_IO_JTAG       __BIT(7)
-    #define RESET_IO_PADS_BANK0 __BIT(8)
-    #define RESET_IO_PADS_QSPI  __BIT(9)
-    #define RESET_IO_PIO0       __BIT(10)
-    #define RESET_IO_PIO1       __BIT(11)
-    #define RESET_IO_PLL_SYS    __BIT(12)
-    #define RESET_IO_PLL_USB    __BIT(13)
-    #define RESET_IO_PWM        __BIT(14)
-    #define RESET_IO_RTC        __BIT(15)
-    #define RESET_IO_SPI0       __BIT(16)
-    #define RESET_IO_SPI1       __BIT(17)
+#define RESET_ADC        __BIT(0)
+#define RESET_BUSCTRL    __BIT(1)
+#define RESET_DMA        __BIT(2)
+#define RESET_I2C0       __BIT(3)
+#define RESET_I2C1       __BIT(4)
+#define RESET_IO_BANK0   __BIT(5)
+#define RESET_IO_QSPI    __BIT(6)
+#define RESET_JTAG       __BIT(7)
+#define RESET_PADS_BANK0 __BIT(8)
+#define RESET_PADS_QSPI  __BIT(9)
+#define RESET_PIO0       __BIT(10)
+#define RESET_PIO1       __BIT(11)
+#define RESET_PLL_SYS    __BIT(12)
+#define RESET_PLL_USB    __BIT(13)
+#define RESET_PWM        __BIT(14)
+#define RESET_RTC        __BIT(15)
+#define RESET_SPI0       __BIT(16)
+#define RESET_SPI1       __BIT(17)
+#define RESET_SYSCFG     __BIT(18)
+#define RESET_SYSINFO    __BIT(19)
+#define RESET_TBMAN      __BIT(20)
+#define RESET_TIMER      __BIT(21)
+#define RESET_UART0      __BIT(22)
+#define RESET_UART1      __BIT(23)
+#define RESET_USBCTRL    __BIT(24)
     REGISTER unsigned RESET @ 0x00;
     REGISTER unsigned WDSEL @ 0x04;
     REGISTER unsigned RESET_DONE @ 0x08;
@@ -140,21 +148,6 @@ DEVICE sio {
     /* Further registers omitted */
 };
 INSTANCE sio SIO @ 0xd0000000;
-
-/* 2.13.3 */
-DEVICE resets {
-    REGISTER unsigned RESET @ 0x00;
-    REGISTER unsigned WDSEL @ 0x04;
-    REGISTER unsigned RESET_DONE @ 0x08;
-#define RESET_BIT_ADC   __BIT(0)
-#define RESET_BIT_I2C0  __BIT(3)
-#define RESET_BIT_I2C1  __BIT(4)
-#define RESET_BIT_SPI0  __BIT(16)
-#define RESET_BIT_SPI1  __BIT(17)
-#define RESET_BIT_UART0 __BIT(22)
-#define RESET_BIT_UART1 __BIT(23)
-};
-INSTANCE resets RESETS @ 0x4000c000;
 
 /* Fields for IO_*_GPIO*_CTRL registers */
 /* 2.18.6.1, 2.18.6.2 */
@@ -470,7 +463,7 @@ DEVICE clocks {
 INSTANCE clocks CLOCKS @ 0x40008000;
 
 
-/* 4.7.5 */
+/* 4.6.5 */
 DEVICE timer {
     /* Since the timer value is 64-bit, it is accessed via a latched
      * pair of registers to prevent races. Always access low before
@@ -494,6 +487,26 @@ DEVICE timer {
     REGISTER unsigned INTS @ 0x40;
 };
 INSTANCE timer TIMER @ 0x40054000;
+
+
+/* 4.7.6 */
+DEVICE watchdog {
+    REGISTER unsigned CTRL @ 0x00;
+    REGISTER unsigned LOAD @ 0x04;
+    REGISTER unsigned REASON @ 0x08;
+    REGISTER unsigned SCRATCH0 @ 0x0c;
+    REGISTER unsigned SCRATCH1 @ 0x10;
+    REGISTER unsigned SCRATCH2 @ 0x14;
+    REGISTER unsigned SCRATCH3 @ 0x18;
+    REGISTER unsigned SCRATCH4 @ 0x1c;
+    REGISTER unsigned SCRATCH5 @ 0x20;
+    REGISTER unsigned SCRATCH6 @ 0x24;
+    REGISTER unsigned SCRATCH7 @ 0x28;
+    REGISTER unsigned TICK @ 0x2c;
+#define WATCHDOG_TICK_ENABLE __BIT(9)
+#define WATCHDOG_TICK_CYCLES __FIELD(0, 9)
+};
+INSTANCE watchdog WATCHDOG @ 0x40058000;
 
 
 /* 4.4.16 */
@@ -685,6 +698,7 @@ INLINE void gpio_set_func(unsigned pin, unsigned func) {
     volatile unsigned *gpio_ctrl = &IO_BANK0_GPIO0_CTRL + (2 * pin); /* skip STATUS registers */
     SET_FIELD(*gpio_ctrl, GPIO_CTRL_FUNCSEL, func);
 }
+
 
 /* Other convenience */
 

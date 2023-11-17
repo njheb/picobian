@@ -77,25 +77,33 @@ argument to be a macro that expands the a 'position, width' pair. */
 #define SCB_SHPR                        _ARR(unsigned, 0xe000ed18)
 
 
+/* 2.13.3 */
 #define RESETS_BASE                     _BASE(0x4000c000)
-    #define RESET_ADC           __BIT(0)
-    #define RESET_BUSCTRL       __BIT(1)
-    #define RESET_DMA           __BIT(2)
-    #define RESET_I2C0          __BIT(3)
-    #define RESET_I2C1          __BIT(4)
-    #define RESET_IO_BANK0      __BIT(5)
-    #define RESET_IO_QSPI       __BIT(6)
-    #define RESET_IO_JTAG       __BIT(7)
-    #define RESET_IO_PADS_BANK0 __BIT(8)
-    #define RESET_IO_PADS_QSPI  __BIT(9)
-    #define RESET_IO_PIO0       __BIT(10)
-    #define RESET_IO_PIO1       __BIT(11)
-    #define RESET_IO_PLL_SYS    __BIT(12)
-    #define RESET_IO_PLL_USB    __BIT(13)
-    #define RESET_IO_PWM        __BIT(14)
-    #define RESET_IO_RTC        __BIT(15)
-    #define RESET_IO_SPI0       __BIT(16)
-    #define RESET_IO_SPI1       __BIT(17)
+#define RESET_ADC        __BIT(0)
+#define RESET_BUSCTRL    __BIT(1)
+#define RESET_DMA        __BIT(2)
+#define RESET_I2C0       __BIT(3)
+#define RESET_I2C1       __BIT(4)
+#define RESET_IO_BANK0   __BIT(5)
+#define RESET_IO_QSPI    __BIT(6)
+#define RESET_JTAG       __BIT(7)
+#define RESET_PADS_BANK0 __BIT(8)
+#define RESET_PADS_QSPI  __BIT(9)
+#define RESET_PIO0       __BIT(10)
+#define RESET_PIO1       __BIT(11)
+#define RESET_PLL_SYS    __BIT(12)
+#define RESET_PLL_USB    __BIT(13)
+#define RESET_PWM        __BIT(14)
+#define RESET_RTC        __BIT(15)
+#define RESET_SPI0       __BIT(16)
+#define RESET_SPI1       __BIT(17)
+#define RESET_SYSCFG     __BIT(18)
+#define RESET_SYSINFO    __BIT(19)
+#define RESET_TBMAN      __BIT(20)
+#define RESET_TIMER      __BIT(21)
+#define RESET_UART0      __BIT(22)
+#define RESET_UART1      __BIT(23)
+#define RESET_USBCTRL    __BIT(24)
 #define RESETS_RESET                    _REG(unsigned, 0x4000c000)
 #define RESETS_WDSEL                    _REG(unsigned, 0x4000c004)
 #define RESETS_RESET_DONE               _REG(unsigned, 0x4000c008)
@@ -132,22 +140,6 @@ argument to be a macro that expands the a 'position, width' pair. */
 #define SIO_GPIO_HI_OE_CLR              _REG(unsigned, 0xd0000048)
 #define SIO_GPIO_HI_OE_XOR              _REG(unsigned, 0xd000004c)
     /* Further registers omitted */
-
-/* 2.13.3 */
-#define RESETS_BASE                     _BASE(0x4000c000)
-#define RESETS_RESET                    _REG(unsigned, 0x4000c000)
-#define RESETS_WDSEL                    _REG(unsigned, 0x4000c004)
-#define RESETS_RESET_DONE               _REG(unsigned, 0x4000c008)
-#define RESET_BIT_ADC   __BIT(0)
-#define RESET_BIT_I2C0  __BIT(3)
-#define RESET_BIT_I2C1  __BIT(4)
-#define RESET_BIT_SPI0  __BIT(16)
-#define RESET_BIT_SPI1  __BIT(17)
-#define RESET_BIT_UART0 __BIT(22)
-#define RESET_BIT_UART1 __BIT(23)
-#define RESETS_RESET                    _REG(unsigned, 0x4000c000)
-#define RESETS_WDSEL                    _REG(unsigned, 0x4000c004)
-#define RESETS_RESET_DONE               _REG(unsigned, 0x4000c008)
 
 /* Fields for IO_*_GPIO*_CTRL registers */
 /* 2.18.6.1, 2.18.6.2 */
@@ -451,7 +443,7 @@ argument to be a macro that expands the a 'position, width' pair. */
 #define CLOCKS_INTS                     _REG(unsigned, 0x400080c4)
 
 
-/* 4.7.5 */
+/* 4.6.5 */
 #define TIMER_BASE                      _BASE(0x40054000)
     /* Since the timer value is 64-bit, it is accessed via a latched
      * pair of registers to prevent races. Always access low before
@@ -473,6 +465,24 @@ argument to be a macro that expands the a 'position, width' pair. */
 #define TIMER_INTE                      _REG(unsigned, 0x40054038)
 #define TIMER_INTF                      _REG(unsigned, 0x4005403c)
 #define TIMER_INTS                      _REG(unsigned, 0x40054040)
+
+
+/* 4.7.6 */
+#define WATCHDOG_BASE                   _BASE(0x40058000)
+#define WATCHDOG_CTRL                   _REG(unsigned, 0x40058000)
+#define WATCHDOG_LOAD                   _REG(unsigned, 0x40058004)
+#define WATCHDOG_REASON                 _REG(unsigned, 0x40058008)
+#define WATCHDOG_SCRATCH0               _REG(unsigned, 0x4005800c)
+#define WATCHDOG_SCRATCH1               _REG(unsigned, 0x40058010)
+#define WATCHDOG_SCRATCH2               _REG(unsigned, 0x40058014)
+#define WATCHDOG_SCRATCH3               _REG(unsigned, 0x40058018)
+#define WATCHDOG_SCRATCH4               _REG(unsigned, 0x4005801c)
+#define WATCHDOG_SCRATCH5               _REG(unsigned, 0x40058020)
+#define WATCHDOG_SCRATCH6               _REG(unsigned, 0x40058024)
+#define WATCHDOG_SCRATCH7               _REG(unsigned, 0x40058028)
+#define WATCHDOG_TICK                   _REG(unsigned, 0x4005802c)
+#define WATCHDOG_TICK_ENABLE __BIT(9)
+#define WATCHDOG_TICK_CYCLES __FIELD(0, 9)
 
 
 /* 4.4.16 */
@@ -722,6 +732,7 @@ INLINE void gpio_set_func(unsigned pin, unsigned func) {
     volatile unsigned *gpio_ctrl = &IO_BANK0_GPIO0_CTRL + (2 * pin); /* skip STATUS registers */
     SET_FIELD(*gpio_ctrl, GPIO_CTRL_FUNCSEL, func);
 }
+
 
 /* Other convenience */
 
