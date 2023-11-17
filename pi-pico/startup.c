@@ -61,22 +61,26 @@ int memcmp(const void *pp, const void *qq, int n)
 }
 
 /* Addresses set by the linker */
-extern unsigned char __data_start[], __data_end[],
-    __bss_start[], __bss_end[], __etext[], __stack[];
+extern unsigned char __bss_start[], __bss_end[], __stack[];
 
 /* __reset -- the system starts here */
 void __reset(void)
 {
-    int data_size = __data_end - __data_start;
     int bss_size = __bss_end - __bss_start;
-    memcpy(__data_start, __etext, data_size);
     memset(__bss_start, 0, bss_size);
+
+#define WANT_RESET (BIT(RESET_IO_BANK0) | BIT(RESET_IO_PADS_BANK0) | BIT(RESET_IO_PLL_SYS))
+    RESETS_RESET &= ~(unsigned)WANT_RESET;
+    while (~RESETS_RESET_DONE & WANT_RESET);
+#undef WANT_RESET
 
     /* Enable the crystal oscillator (XOSC) */
     _Static_assert(XOSC_HZ == 12000000);
     XOSC_STARTUP = 48; /* sufficient startup delay */
     XOSC_CTRL = 0xaa0 | (0xfab << 12); /* frequency range 1-15MHz, enable */
-    while (!(XOSC_STATUS >> 31)); /* spin until XOSC is stable */
+    while (!(XOSC_STATUS >> 31)) {
+      /* spin until XOSC is stable */
+    }
 
     /* Configure PLL SYS to be driven by XOSC at 125MHz */
     _Static_assert(XOSC_HZ == 12000000 && SYS_CLK_HZ == 125000000);
@@ -84,6 +88,7 @@ void __reset(void)
     PLL_SYS_CS = 1; /* REFDIV = 1, BYPASS = 0 */
     PLL_SYS_FBDIV_INT = 125;
     PLL_SYS_PRIM = (2 << 16) | (6 << 12); /* post-divider = 2*6 = 12 */
+    PLL_SYS_PWR = 0; /* enable PLL SYS */
 
     /* Drive CLK_REF by XOSC and CLK_SYS by PLL SYS. That way, we can also
      * disable the on-chip ring oscillator (ROSC) to save power. */

@@ -3,8 +3,8 @@
 
 include config.mk
 
-EXAMPLES = ex-level.hex ex-valentine.hex ex-echo.hex ex-remote.hex \
-	ex-timeout.hex
+EXAMPLES = ex-level.bin ex-valentine.bin ex-echo.bin ex-remote.bin \
+	ex-timeout.bin
 
 all: microbian.a startup.o
 
@@ -28,8 +28,18 @@ MICROBIAN = microbian.o $(MPX).o $(DRIVERS) lib.o
 microbian.a: $(MICROBIAN)
 	$(AR) cr $@ $^
 
-%.hex: %.elf
-	arm-none-eabi-objcopy -O ihex $< $@
+ex-%.bin: $(BIN_PREPEND) ex-unpadded-%.bin
+	cat $^ >$@
+
+ex-%.uf2: ex-%.bin uf2
+	./uf2 $< $@
+
+# Note that this rule intentionally uses system cc.
+uf2: uf2.c
+	cc $< -o $@
+
+ex-unpadded-%.bin: ex-%.elf
+	arm-none-eabi-objcopy -O binary $< $@
 
 %.elf: %.o startup.o microbian.a
 	$(CC) $(CPU) $(CFLAGS) -T $(LSCRIPT) -nostdlib $^ -lc -lgcc \
@@ -45,7 +55,7 @@ microbian.a: $(MICROBIAN)
 	./hwdesc $< >$@
 
 clean: force
-	rm -f microbian.a *.o *.elf *.hex *.map
+	rm -f microbian.a *.o *.elf *.bin *.map $(BOARD)/*.o $(BOARD)/*.bin uf2
 
 force:
 

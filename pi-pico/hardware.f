@@ -79,6 +79,31 @@ DEVICE scb {
 INSTANCE scb SCB @ 0xe000ed00;
 
 
+DEVICE resets {
+    #define RESET_ADC           __BIT(0)
+    #define RESET_BUSCTRL       __BIT(1)
+    #define RESET_DMA           __BIT(2)
+    #define RESET_I2C0          __BIT(3)
+    #define RESET_I2C1          __BIT(4)
+    #define RESET_IO_BANK0      __BIT(5)
+    #define RESET_IO_QSPI       __BIT(6)
+    #define RESET_IO_JTAG       __BIT(7)
+    #define RESET_IO_PADS_BANK0 __BIT(8)
+    #define RESET_IO_PADS_QSPI  __BIT(9)
+    #define RESET_IO_PIO0       __BIT(10)
+    #define RESET_IO_PIO1       __BIT(11)
+    #define RESET_IO_PLL_SYS    __BIT(12)
+    #define RESET_IO_PLL_USB    __BIT(13)
+    #define RESET_IO_PWM        __BIT(14)
+    #define RESET_IO_RTC        __BIT(15)
+    #define RESET_IO_SPI0       __BIT(16)
+    #define RESET_IO_SPI1       __BIT(17)
+    REGISTER unsigned RESET @ 0x00;
+    REGISTER unsigned WDSEL @ 0x04;
+    REGISTER unsigned RESET_DONE @ 0x08;
+};
+INSTANCE resets RESETS @ 0x4000c000;
+
 /* Nested vectored interupt controller (Cortex-M0+) */
 DEVICE nvic {
     REGISTER unsigned ISER[8] @ 0x100;
@@ -134,7 +159,7 @@ INSTANCE resets RESETS @ 0x4000c000;
 /* Fields for IO_*_GPIO*_CTRL registers */
 /* 2.18.6.1, 2.18.6.2 */
 /* Function Select. Values are different per-pin. 31 (0x1f) is NULL. */
-#define GPIO_CTRL_FUNCSEL __FIELD(0, 4)
+#define GPIO_CTRL_FUNCSEL __FIELD(0, 5)
 #define GPIO_FUNC_XIP  0
 #define GPIO_FUNC_SPI  1
 #define GPIO_FUNC_UART 2

@@ -2,5 +2,7 @@
 *.hex
 *.map
 *.elf
+*.bin
 config.mk
 microbian.a
+uf2

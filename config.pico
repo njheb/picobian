@@ -1,6 +1,13 @@
 # config.pico
 
 BOARD = pi-pico
-CHIP = cortex-m0
+CHIP = cortex-m0plus
 MPX = mpx-m0
 LSCRIPT = RP2040.ld
+BIN_PREPEND = pi-pico/boot_stage2_padded.bin
+
+pi-pico/boot_stage2.bin: pi-pico/boot_stage2.o
+	arm-none-eabi-objcopy -O binary $< $@
+
+pi-pico/boot_stage2_padded.bin: pi-pico/boot_stage2.bin
+	./pi-pico/pad_stage2.py $< $@

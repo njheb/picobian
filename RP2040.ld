@@ -1,9 +1,9 @@
 /* RP2040.ld */
 
 MEMORY {
-    FLASH (rx) : ORIGIN = 0x00000000,      LENGTH = 2M
-    /* RAM includes SRAM_STRIPED, SRAM4, SRAM5 */
-    RAM  (rwx) : ORIGIN = 0x20000000,      LENGTH = 264K
+    /* RAM includes SRAM_STRIPED and SRAM4. SRAM5 is not
+		 * included as it contains the stage2 bootloader. */
+    RAM (rwx) : ORIGIN = 0x20000000, LENGTH = 260K
 }
 
 OUTPUT_FORMAT ("elf32-littlearm")
@@ -33,7 +33,7 @@ SECTIONS {
         PROVIDE(i2c0_handler = default_handler);
         PROVIDE(i2c1_handler = default_handler);
         PROVIDE(rtc_handler = default_handler);
-    } > FLASH
+    } > RAM
 
     /DISCARD/ : {
         /* Some parts of the GCC library have C++ exception data,

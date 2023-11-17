@@ -4,4 +4,4 @@ BOARD = ubit-v2
 CHIP = cortex-m4
 MPX = mpx-m4
 LSCRIPT = nRF52833.ld
-
+BIN_PREPEND =
