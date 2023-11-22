@@ -139,6 +139,11 @@ argument to be a macro that expands the a 'position, width' pair. */
 #define SIO_GPIO_HI_OE_SET              _REG(unsigned, 0xd0000044)
 #define SIO_GPIO_HI_OE_CLR              _REG(unsigned, 0xd0000048)
 #define SIO_GPIO_HI_OE_XOR              _REG(unsigned, 0xd000004c)
+#define SIO_FIFO_ST                     _REG(unsigned, 0xd0000050)
+#define SIO_FIFO_ST_VLD __BIT(0)
+#define SIO_FIFO_ST_RDY __BIT(1)
+#define SIO_FIFO_WR                     _REG(unsigned, 0xd0000054)
+#define SIO_FIFO_RD                     _REG(unsigned, 0xd0000058)
     /* Further registers omitted */
 
 /* Fields for IO_*_GPIO*_CTRL registers */

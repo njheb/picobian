@@ -145,6 +145,11 @@ DEVICE sio {
     REGISTER unsigned GPIO_HI_OE_SET @ 0x44;
     REGISTER unsigned GPIO_HI_OE_CLR @ 0x48;
     REGISTER unsigned GPIO_HI_OE_XOR @ 0x4c;
+    REGISTER unsigned FIFO_ST @ 0x50;
+#define SIO_FIFO_ST_VLD __BIT(0)
+#define SIO_FIFO_ST_RDY __BIT(1)
+    REGISTER unsigned FIFO_WR @ 0x54;
+    REGISTER unsigned FIFO_RD @ 0x58;
     /* Further registers omitted */
 };
 INSTANCE sio SIO @ 0xd0000000;

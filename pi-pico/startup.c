@@ -60,6 +60,47 @@ int memcmp(const void *pp, const void *qq, int n)
     return 0;
 }
 
+static unsigned char __stack_core1_limit[2048];
+
+static void __reset_core1(void) {
+    gpio_set_func(GPIO_LED, GPIO_FUNC_SIO);
+    gpio_dir(GPIO_LED, 1);
+    unsigned x = 1;
+    for (;;) {
+        gpio_out(GPIO_LED, x);
+        unsigned wait_for = TIMER_TIMERAWL + 1000000; // 1000ms
+        while (TIMER_TIMERAWL < wait_for);
+        x = !x;
+    }
+}
+
+static void init_core1(void) {
+    /* Logic from RP2040 datasheet section 2.8.2 and the Pico SDK */
+    extern void *__vectors[];
+    unsigned char __stack_core1 = (unsigned)__stack_core1_limit + sizeof __stack_core1_limit;
+    const unsigned cmd_sequence[] = { 0, 0, 1, (unsigned)__vectors, (unsigned)__stack_core1, (unsigned)__reset_core1 };
+    unsigned seq = 0;
+    while (seq < sizeof cmd_sequence / sizeof cmd_sequence[0]) {
+        unsigned cmd = cmd_sequence[seq];
+        /* If the command is 0, flush the FIFO completely */
+        if (!cmd) {
+            while (GET_BIT(SIO_FIFO_ST, SIO_FIFO_ST_VLD)) {
+                (void)SIO_FIFO_RD;
+            }
+            asm volatile ("sev");
+        }
+        /* Send the command to the other core */
+        while (!GET_BIT(SIO_FIFO_ST, SIO_FIFO_ST_RDY));
+        SIO_FIFO_WR = cmd;
+        asm volatile ("sev");
+        /* Move to next state on correct response, otherwise start over */
+        while (!GET_BIT(SIO_FIFO_ST, SIO_FIFO_ST_VLD)) {
+            asm volatile ("wfe");
+        }
+        seq = SIO_FIFO_RD == cmd ? seq + 1 : 0;
+    }
+}
+
 /* Addresses set by the linker */
 extern unsigned char __bss_start[], __bss_end[], __stack[];
 
@@ -111,6 +152,9 @@ void __reset(void)
     /* CLK_PERI is set up with aux src 'clk_sys' on reset, so it is already
      * ready to go - we just need to enable it. */
     CLOCKS_CLK_PERI_CTRL = 1 << 11; /* ENABLE */
+
+    /* Finally, we are ready to initialize core 1. */
+    init_core1();
 
     __start();
 }
