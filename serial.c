@@ -44,7 +44,9 @@ static int n_tx = 0;            /* Character count */
 
 static int reader = -1;         /* Process waiting to read */
 
+#if defined(UBIT) || defined(KL25Z)
 static int txidle = 1;          /* True if transmitter is idle */
+#endif
 
 /* echo -- echo input character */
 static void echo(char ch) {
@@ -105,7 +107,7 @@ the UART itself from sending interrupts.  The pending bit is cleared
 on return from the interrupt handler, but that doesn't stop the UART
 from setting it again. */
 
-#ifdef UBIT
+#if defined(UBIT)
 /* serial_interrupt -- handle serial interrupt */
 static void serial_interrupt(void) {
     if (UART_RXDRDY) {
@@ -122,9 +124,7 @@ static void serial_interrupt(void) {
     clear_pending(UART_IRQ);
     enable_irq(UART_IRQ);
 }
-#endif
-
-#ifdef KL25Z
+#elif defined(KL25Z)
 /* serial_interrupt -- handle serial interrupt */
 static void serial_interrupt(void) {
     if (UART0_S1 & BIT(UART_S1_RDRF)) {
@@ -140,6 +140,18 @@ static void serial_interrupt(void) {
     clear_pending(UART0_IRQ);
     enable_irq(UART0_IRQ);
 }
+#elif defined(PI_PICO)
+static void serial_interrupt(void) {
+    /* Due to the FIFOs, we could have multiple bytes (UARTRXINTR may not even
+     * trigger until we reach a certain fill point). Make sure to flush the
+     * whole buffer. */
+    while (!GET_BIT(UART0_FR, UART_FR_RXFE)) {
+        keypress((char)(unsigned char)UART0_DR);
+    }
+
+    clear_pending(UART0_IRQ);
+    enable_irq(UART0_IRQ);
+}
 #endif
 
 /* reply -- send reply or start transmitter if possible */
@@ -147,24 +159,44 @@ static void reply(void) {
     // Can we satisfy a reader?
     if (reader >= 0 && n_avail > 0) {
         send_int(reader, REPLY, rxbuf[rx_outp]);
+        reader = -1;
         rx_outp = wrap(rx_outp+1);
         n_avail--;
-        reader = -1;
     }
 
     // Can we start transmitting a character?
+
+#if defined(UBIT)
     if (txidle && n_tx > 0) {
-#ifdef UBIT
         UART_TXD = txbuf[tx_outp];
-#endif
-#ifdef KL25Z
-        UART0_D = txbuf[tx_outp];
-        SET_BIT(UART0_C2, UART_C2_TIE);
-#endif
         tx_outp = wrap(tx_outp+1);
         n_tx--;
         txidle = 0;
     }
+#elif defined(KL25Z)
+    if (txidle && n_tx > 0) {
+        UART0_D = txbuf[tx_outp];
+        SET_BIT(UART0_C2, UART_C2_TIE);
+        tx_outp = wrap(tx_outp+1);
+        n_tx--;
+        txidle = 0;
+    }
+#elif defined(PI_PICO)
+    /* We can do this in a loop due to the UART FIFO */
+    while (!GET_BIT(UART0_FR, UART_FR_TXFF) && n_tx > 0) {
+        UART0_DR = (unsigned char)txbuf[tx_outp];
+        tx_outp = wrap(tx_outp+1);
+        n_tx--;
+    }
+    if (n_tx > 0) {
+        /* Trigger an interrupt once there's space in the transmit FIFO. */
+        SET_BIT(UART0_IMSC, UART_IMSC_TXIM);
+    } else {
+        /* We've transmitted all data - stop telling us about FIFO space, or
+         * we'll be getting this interrupt constantly! */
+        CLR_BIT(UART0_IMSC, UART_IMSC_TXIM);
+    }
+#endif
 }
 
 /* queue_char -- add character to output buffer */
@@ -188,7 +220,7 @@ static void serial_task(int arg) {
     char ch;
     char *buf;
 
-#ifdef UBIT
+#if defined(UBIT)
     UART_ENABLE = UART_ENABLE_Disabled;
     UART_BAUDRATE = UART_BAUDRATE_9600; // 9600 baud
     UART_CONFIG = FIELD(UART_CONFIG_PARITY, UART_PARITY_None);
@@ -203,9 +235,9 @@ static void serial_task(int arg) {
     UART_INTENSET = BIT(UART_INT_RXDRDY) | BIT(UART_INT_TXDRDY);
     connect(UART_IRQ);
     enable_irq(UART_IRQ);
-#endif
 
-#ifdef KL25Z
+    txidle = 1;
+#elif defined(KL25Z)
     // enable PLL clock
     SET_FIELD(SIM_SOPT2, SIM_SOPT2_UART0SRC, SIM_SOPT2_SRC_PLL);
     SET_BIT(SIM_SCGC4, SIM_SCGC4_UART0);
@@ -236,9 +268,35 @@ static void serial_task(int arg) {
     enable_irq(UART0_IRQ);
     connect(UART0_IRQ);
     enable_irq(UART0_IRQ);
-#endif
 
     txidle = 1;
+#elif defined(PI_PICO)
+    /* Helper functions from microbian.c */
+    extern void uart_set_baud(unsigned baud);
+    extern void uart_set_format(unsigned char data_bits, unsigned char stop_bits, unsigned char parity);
+
+    gpio_set_func(USB_TX, GPIO_FUNC_UART);
+    gpio_set_func(USB_RX, GPIO_FUNC_UART);
+    reset_subsystem(RESET_UART0);
+    uart_set_baud(9600);
+    uart_set_format(8, 1, 0); /* 8N1 */
+    /* Enable FIFOs */
+    SET_BIT(UART0_LCR_H, UART_LCR_H_FEN);
+    /* Enable UART */
+    UART0_CR = BIT(UART_CR_UARTEN) | BIT(UART_CR_TXE) | BIT(UART_CR_RXE);
+
+    connect(UART0_IRQ);
+    enable_irq(UART0_IRQ);
+
+    /* UARTRXINTR: RX buffer is filled past the trigger level
+     * UARTRTINTR: RX buffer is non-empty, and no recent RX
+     * UARTTXINTR: TX buffer is less filled than the trigger level */
+    UART0_IMSC = BIT(UART_IMSC_RXIM) | BIT(UART_IMSC_RTIM);
+    /* We haven't immediately set UARTTXINTR. We'll only set that when we have
+     * pending data: otherwise, it'll be asserted constantly!
+     * The default trigger levels are 1/2 full for both the TX and RX FIFOs.
+     * This is a good level, and will be set now due to the subsystem reset. */
+#endif
 
     while (1) {
         receive(ANY, &m);

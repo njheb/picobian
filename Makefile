@@ -21,7 +21,7 @@ AR = arm-none-eabi-ar
 vpath %.c $(BOARD)
 
 #DRIVERS = timer.o serial.o i2c.o radio.o display.o adc.o
-DRIVERS =
+DRIVERS = serial.o
 
 MICROBIAN = microbian.o $(MPX).o $(DRIVERS) lib.o
 

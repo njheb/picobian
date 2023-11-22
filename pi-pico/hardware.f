@@ -563,6 +563,7 @@ DEVICE uart {
     REGISTER unsigned DR @ 0x000;
     REGISTER unsigned RSR @ 0x004;
     REGISTER unsigned FR @ 0x018;
+#define UART_FR_RXFE __BIT(4)
 #define UART_FR_TXFF __BIT(5)
 #define UART_FR_RXFF __BIT(6)
     REGISTER unsigned ILPR @ 0x020;
@@ -591,6 +592,9 @@ DEVICE uart {
 #define UART_CR_CTSEN  __BIT(15)
     REGISTER unsigned IFLS @ 0x034;
     REGISTER unsigned IMSC @ 0x038;
+#define UART_IMSC_RXIM __BIT(4)
+#define UART_IMSC_TXIM __BIT(5)
+#define UART_IMSC_RTIM __BIT(6)
     REGISTER unsigned RIS @ 0x03c;
     REGISTER unsigned MIS @ 0x040;
     REGISTER unsigned ICR @ 0x044;

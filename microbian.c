@@ -895,7 +895,7 @@ void uart_set_baud(unsigned baud) {
     unsigned baud_idiv = baud_div >> 7;
     unsigned baud_fdiv = ((baud_div & 0x7f) + 1) / 2;
 
-    if (baud_idiv < 0 || baud_idiv > 65535) {
+    if (baud_idiv <= 0 || baud_idiv >= 65535) {
         panic("uart: unachievable baud rate requested: %u", baud);
     }
 
