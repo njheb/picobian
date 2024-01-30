@@ -88,6 +88,9 @@ void tick(int ms);
 /* interrupt -- send interrupt message from handler */
 void interrupt(int pid);
 
+/* enable_irq -- enable receiving an IRQ */
+void enable_irq(int irq);
+
 /* kprintf -- print message on console without using serial task */
 void kprintf(char *fmt, ...);
 

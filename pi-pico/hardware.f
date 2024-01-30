@@ -151,6 +151,7 @@ DEVICE sio {
     REGISTER unsigned FIFO_WR @ 0x54;
     REGISTER unsigned FIFO_RD @ 0x58;
     /* Further registers omitted */
+    REGISTER unsigned SPINLOCK0 @ 0x100;
 };
 INSTANCE sio SIO @ 0xd0000000;
 
@@ -641,11 +642,11 @@ INSTANCE adc ADC @ 0x4004c000;
 /* irq_priority -- set priority of an IRQ from 0 (highest) to 255 */
 void irq_priority(int irq, unsigned priority);
 
-/* enable_irq -- enable interrupts from an IRQ */
-#define enable_irq(irq)  NVIC_ISER[0] = BIT(irq)
+/* enable_irq_this_core -- enable interrupts from an IRQ */
+#define enable_irq_this_core(irq)  NVIC_ISER[0] = BIT(irq)
 
-/* disable_irq -- disable interrupts from a specific IRQ */
-#define disable_irq(irq)  NVIC_ICER[0] = BIT(irq)
+/* disable_irq_this_core -- disable interrupts from a specific IRQ */
+#define disable_irq_this_core(irq)  NVIC_ICER[0] = BIT(irq)
 
 /* clear_pending -- clear pending interrupt from an IRQ */
 #define clear_pending(irq)  NVIC_ICPR[0] = BIT(irq)
@@ -717,6 +718,7 @@ INLINE void reset_subsystem(unsigned bit) {
     while (!GET_BIT(RESETS_RESET_DONE, bit));
 }
 
+#define get_active_core() SIO_CPUID
 
 /* A few assembler macros for single instructions. */
 #define pause()         asm volatile ("wfe")
@@ -726,6 +728,7 @@ INLINE void reset_subsystem(unsigned bit) {
                            asm volatile ("mrs %0, primask" : "=r" (x)); x; })
 #define set_primask(x)  asm volatile ("msr primask, %0" : : "r" (x))
 #define nop()           asm volatile ("nop")
+#define alert()         asm volatile ("sev")
 
 /* The rate of the crystal oscillator attached to the system (12MHz) */
 #define XOSC_HZ 12000000

@@ -13,7 +13,7 @@ examples: $(EXAMPLES)
 ex-level.elf: accel.o
 
 CPU = -mcpu=$(CHIP) -mthumb
-CFLAGS = -O -g -Wall -ffreestanding -I $(BOARD)
+CFLAGS = -O3 -g -Wall -ffreestanding -I $(BOARD)
 CC = arm-none-eabi-gcc
 AS = arm-none-eabi-as
 AR = arm-none-eabi-ar
@@ -42,7 +42,7 @@ ex-unpadded-%.bin: ex-%.elf
 	arm-none-eabi-objcopy -O binary $< $@
 
 %.elf: %.o startup.o microbian.a
-	$(CC) $(CPU) $(CFLAGS) -T $(LSCRIPT) -nostdlib $^ -lc -lgcc \
+	$(CC) $(CPU) $(CFLAGS) -T $(LSCRIPT) $^ -nostdlib -lc -lgcc \
 		-o $@ -Wl,-Map,$*.map
 
 %.o: %.c

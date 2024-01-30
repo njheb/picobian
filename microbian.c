@@ -15,7 +15,6 @@ void debug_sched(int pid);
 #define DEBUG_SCHED(pid)
 #endif
 
-
 /* PROCESS DESCRIPTORS */
 
 /* Each process has a descriptor, allocated when the process is
@@ -33,7 +32,8 @@ struct _proc {
     unsigned *sp;             /* Saved stack pointer */
     void *stack;              /* Stack area */
     unsigned stksize;         /* Stack size (bytes) */
-    int priority;             /* Priority: 0 is highest */
+    int priority;             /* Priority: 0 is highest.
+                                 0 (P_HANDLER) only runs on core 0. */
     
     proc waiting;             /* Processes waiting to send */
     int pending;              /* Whether HARDWARE message pending */
@@ -94,6 +94,32 @@ static proc new_proc(void)
     return (proc) htop;
 }
 
+/* This lock may only be held while in kernel code. Whilst the lock is held,
+ * interrupts are automatically disabled on this core. This is to prevent a
+ * scenario in which an interrupt recursively calls into kernel code which
+ * attempts to re-acquire an already-held lock, triggering a deadlock. */
+static void acquire_lock() {
+#ifdef PI_PICO
+    intr_disable();
+    if (__builtin_expect(SIO_SPINLOCK0 == 0, 0)) {
+        /* Lock was held on first attempt. Enable LED to indicate
+         * contention, and spin until lock is released. */
+        gpio_out(GPIO_LED, 1);
+        while (SIO_SPINLOCK0 == 0);
+        gpio_out(GPIO_LED, 0);
+    }
+#endif
+}
+
+/* Note that this function always enables interrupts, even if they were disabled
+ * before `acquire_lock`. See `acquire_lock` for details. */
+static void release_lock() {
+#ifdef PI_PICO
+    asm volatile ("dmb");
+    SIO_SPINLOCK0 = 0;
+    intr_enable();
+#endif
+}
 
 /* PROCESS TABLE */
 
@@ -102,8 +128,13 @@ static proc new_proc(void)
 static proc os_ptable[NPROCS];
 static unsigned os_nprocs = 0;
 
-static proc os_current;
-static proc idle_proc;
+static struct {
+    proc current;
+    proc idle;
+} core_procs[2];
+
+#define os_current (core_procs[get_active_core()].current)
+#define idle_proc (core_procs[get_active_core()].idle)
 
 #define BLANK 0xdeadbeef        /* Filler for initial stack */
 
@@ -182,12 +213,18 @@ static inline void make_ready(proc p)
     else
         q->tail->next = p;
     q->tail = p;
+
+    /* Pairs with `pause` in `idle_task` */
+    alert();
 }
 
 /* choose_proc -- the current process is blocked: pick a new one */
 static inline void choose_proc(void)
 {
-    for (int p = 0; p < NPRIO; p++) {
+    /* Because core 0 handles interrupts, it is the only core which is allowed
+     * to run interrupt handler processes. See `connect` for details. */
+    int min_prio = get_active_core() == 0 ? 0 : 1;
+    for (int p = min_prio; p < NPRIO; p++) {
         queue q = &os_readyq[p];
         if (q->head != NULL) {
             os_current = q->head;
@@ -506,21 +543,18 @@ the handler once it has reacted to the interrupt.  We only deal with
 the genuine interrupts >= 0, not the 16 exceptions that are < 0 this way. */
 
 /* os_handler -- pid of handler process for each interrupt */
+#define NO_HANDLER -1
 static int os_handler[N_INTERRUPTS];
-
-/* connect -- connect the current process to an IRQ */
-void connect(int irq)
-{
-    if (irq < 0) panic("Can't connect to CPU exceptions");
-    os_current->priority = P_HANDLER;
-    os_handler[irq] = os_current->pid;
-}
 
 /* priority -- set process priority */
 void priority(int p)
 {
     if (p < 0 || p > P_LOW) panic("Bad priority %d\n", p);
     os_current->priority = p;
+    if (p == P_HANDLER && get_active_core() != 0) {
+        /* P_HANDLER processes only run on core 0. */
+        yield();
+    }
 }
 
 /* interrupt -- send interrupt message */
@@ -550,11 +584,41 @@ cause of the interrupt, then re-enable it. */
 /* default_handler -- handler for most interrupts */
 void default_handler(void)
 {
-    int irq = active_irq(), task;
-    if (irq < 0 || (task = os_handler[irq]) == 0)
+    int irq = active_irq();
+
+    /* In theory, this should only get hit by core 0. However, if an interrupt
+     * does somehow get enabled on another core, let's not unnecessarily panic;
+     * just turn it off again and continue. */
+    if (get_active_core() != 0) {
+        disable_irq_this_core(irq);
+        return;
+    }
+
+    acquire_lock();
+
+    int task;
+    if (irq < 0 || (task = os_handler[irq]) == NO_HANDLER)
         panic("Unexpected interrupt %d", irq);
-    disable_irq(irq);
+    disable_irq_this_core(irq);
     interrupt(task);
+
+    release_lock();
+}
+
+/* enable_irq -- enable an IRQ on core 0 */
+void enable_irq(int irq)
+{
+    if (get_active_core() == 0) {
+        enable_irq_this_core(irq);
+    } else {
+        /* The IRQ must be enabled on core 0. To ensure we set this correctly,
+         * temporarily change our priority to force this process onto core 0. */
+        int old_priority = os_current->priority;
+        os_current->priority = P_HANDLER;
+        yield();
+        enable_irq_this_core(irq);
+        os_current->priority = old_priority;
+    }
 }
 
 /* hardfault_handler -- substitutes for the definition in startup.c */
@@ -662,28 +726,46 @@ void init(void);
 /* idle_task -- body of idle process */
 static void idle_task(void)
 {
-    /* Pick a genuine process to run */
-    yield();
-
-    /* Idle only runs again when there's nothing to do. */
-    while (1) pause();
+    while (1) {
+        /* Pick a genuine process to run */
+        yield();
+        /* Pairs with `alert` in `make_ready` */
+        pause();
+    }
 }    
 
-/* __start -- start the operating system */
-void __start(void)
+/* __init -- prepare micro:bian to run scheduling loops */
+void __init(void)
 {
-    /* Create idle task as process 0 */
+    /* We will use the LED to indicate contention on the kernel lock - set it up now. */
+    gpio_set_func(GPIO_LED, GPIO_FUNC_SIO);
+    gpio_dir(GPIO_LED, 1);
+    /* Run the main application setup routine. */
+    init();
+    /* Set all the interrupt handlers to a dummy value so we can panic
+     * if we receive an unexpected IRQ. It's a bit silly to set this at runtime,
+     * but C doesn't have a nice way to specify that a global array should be
+     * filled with a given value! */
+    for (unsigned i = 0; i < N_INTERRUPTS; ++i) {
+        os_handler[i] = NO_HANDLER;
+    }
+}
+
+/* __start_core -- start a single core's scheduling loop */
+void __start_core(void)
+{
+    acquire_lock();
+
     idle_proc = create_proc("IDLE", IDLE_STACK);
     idle_proc->state = IDLING;
     idle_proc->priority = P_IDLE;
 
-    /* Call the application's setup function */
-    init();
-
-    /* The main program morphs into the idle process. */
     os_current = idle_proc;
     DEBUG_SCHED(0);
-    __run(idle_task, os_current->sp); /* Never returns */
+
+    release_lock();
+
+    __run(idle_task, os_current->sp);
 }
 
 
@@ -698,6 +780,7 @@ void __start(void)
 #define SYS_DUMP 5
 #define SYS_RECEIVET 6
 #define SYS_TICK 7
+#define SYS_CONNECT 8
 
 /* System calls retrieve their arguments from the exception frame that
 was saved by the SVC instruction on entry to the operating system.  We
@@ -711,6 +794,8 @@ unsigned *system_call(unsigned *psp)
 {
     short *pc = (short *) psp[PC_SAVE]; /* Program counter */
     int op = pc[-1] & 0xff;      /* Syscall number from svc instruction */
+
+    acquire_lock();
 
     /* Save sp of the current process */
     os_current->sp = psp;
@@ -764,9 +849,29 @@ unsigned *system_call(unsigned *psp)
         break;
 #endif
 
+    case SYS_CONNECT:
+        os_current->priority = P_HANDLER;
+        {
+            int irq = sysarg(0, int);
+            if (irq < 0) panic("Cannot connect to CPU exception");
+            os_handler[irq] = os_current->pid;
+        }
+        if (get_active_core() != 0) {
+            /* Interrupts are received only on core 0. To prevent core 0 from
+             * having to block if the handler process is running on an auxiliary
+             * core when an interrupt is received, handlers processes are only
+             * permitted to run on core 0. This process is executing on an
+             * auxiliary core, and thus we must schedule a new process. */
+            make_ready(os_current);
+            choose_proc();
+        }
+        break;
+
     default:
         panic("Unknown syscall %d", op);
     }
+
+    release_lock();
 
     /* Return sp for next process to run */
     return os_current->sp;
@@ -775,9 +880,11 @@ unsigned *system_call(unsigned *psp)
 /* cxt_switch -- context switch following interrupt */
 unsigned *cxt_switch(unsigned *psp)
 {
+    acquire_lock();
     os_current->sp = psp;
     make_ready(os_current);
     choose_proc();
+    release_lock();
     return os_current->sp;
 }
 
@@ -830,6 +937,11 @@ void SYSCALL receive_t(int type, message *msg, int timeout)
 void SYSCALL tick(int ms)
 {
     syscall(SYS_TICK);
+}
+
+void SYSCALL connect(int irq)
+{
+    syscall(SYS_CONNECT);
 }
 
 void send_msg(int dest, int type)
@@ -1019,6 +1131,7 @@ void panic(char *fmt, ...)
     va_start(va, fmt);
     do_print(kputc, fmt, va);
     va_end(va);
+    kprintf_internal(" on core %d", get_active_core());
     if (os_current != NULL)
          kprintf_internal(" in process %s", os_current->name);
     kprintf_internal("\r\n");

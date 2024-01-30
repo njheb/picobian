@@ -145,6 +145,7 @@ argument to be a macro that expands the a 'position, width' pair. */
 #define SIO_FIFO_WR                     _REG(unsigned, 0xd0000054)
 #define SIO_FIFO_RD                     _REG(unsigned, 0xd0000058)
     /* Further registers omitted */
+#define SIO_SPINLOCK0                   _REG(unsigned, 0xd0000100)
 
 /* Fields for IO_*_GPIO*_CTRL registers */
 /* 2.18.6.1, 2.18.6.2 */
@@ -675,11 +676,11 @@ argument to be a macro that expands the a 'position, width' pair. */
 /* irq_priority -- set priority of an IRQ from 0 (highest) to 255 */
 void irq_priority(int irq, unsigned priority);
 
-/* enable_irq -- enable interrupts from an IRQ */
-#define enable_irq(irq)  NVIC_ISER[0] = BIT(irq)
+/* enable_irq_this_core -- enable interrupts from an IRQ */
+#define enable_irq_this_core(irq)  NVIC_ISER[0] = BIT(irq)
 
-/* disable_irq -- disable interrupts from a specific IRQ */
-#define disable_irq(irq)  NVIC_ICER[0] = BIT(irq)
+/* disable_irq_this_core -- disable interrupts from a specific IRQ */
+#define disable_irq_this_core(irq)  NVIC_ICER[0] = BIT(irq)
 
 /* clear_pending -- clear pending interrupt from an IRQ */
 #define clear_pending(irq)  NVIC_ICPR[0] = BIT(irq)
@@ -751,6 +752,7 @@ INLINE void reset_subsystem(unsigned bit) {
     while (!GET_BIT(RESETS_RESET_DONE, bit));
 }
 
+#define get_active_core() SIO_CPUID
 
 /* A few assembler macros for single instructions. */
 #define pause()         asm volatile ("wfe")
@@ -760,6 +762,7 @@ INLINE void reset_subsystem(unsigned bit) {
                            asm volatile ("mrs %0, primask" : "=r" (x)); x; })
 #define set_primask(x)  asm volatile ("msr primask, %0" : : "r" (x))
 #define nop()           asm volatile ("nop")
+#define alert()         asm volatile ("sev")
 
 /* The rate of the crystal oscillator attached to the system (12MHz) */
 #define XOSC_HZ 12000000
