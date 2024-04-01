@@ -8,6 +8,12 @@
 
 #define _TIMEOUT 1
 
+#define DEBUG_PIN_CONTENTION 4
+#define DEBUG_PIN_CORE0_KERNEL 5
+#define DEBUG_PIN_CORE1_KERNEL 6
+#define DEBUG_PIN_CORE0_IDLE 7
+#define DEBUG_PIN_CORE1_IDLE 8
+
 #ifdef MICROBIAN_DEBUG
 void debug_sched(int pid);
 #define DEBUG_SCHED(pid) debug_sched(pid)
@@ -99,14 +105,35 @@ static proc new_proc(void)
  * scenario in which an interrupt recursively calls into kernel code which
  * attempts to re-acquire an already-held lock, triggering a deadlock. */
 static void acquire_lock() {
-#ifdef PI_PICO
+#if defined(DEBUG_PIN_CORE0_KERNEL) || defined(DEBUG_PIN_CORE1_KERNEL)
+    switch (get_active_core()) {
+    case 0:
+#ifdef DEBUG_PIN_CORE0_KERNEL
+        gpio_out(DEBUG_PIN_CORE0_KERNEL, 1);
+#endif
+        break;
+    case 1:
+#ifdef DEBUG_PIN_CORE1_KERNEL
+        gpio_out(DEBUG_PIN_CORE1_KERNEL, 1);
+#endif
+        break;
+    default:
+        break;
+    }
+#endif
+
     intr_disable();
+#ifdef PI_PICO
     if (__builtin_expect(SIO_SPINLOCK0 == 0, 0)) {
-        /* Lock was held on first attempt. Enable LED to indicate
+        /* Lock was held on first attempt. Pull debug pin high to indicate
          * contention, and spin until lock is released. */
-        gpio_out(GPIO_LED, 1);
+#ifdef DEBUG_PIN_CONTENTION
+        gpio_out(DEBUG_PIN_CONTENTION, 1);
+#endif
         while (SIO_SPINLOCK0 == 0);
-        gpio_out(GPIO_LED, 0);
+#ifdef DEBUG_PIN_CONTENTION
+        gpio_out(DEBUG_PIN_CONTENTION, 0);
+#endif
     }
 #endif
 }
@@ -117,7 +144,24 @@ static void release_lock() {
 #ifdef PI_PICO
     asm volatile ("dmb");
     SIO_SPINLOCK0 = 0;
+#endif
     intr_enable();
+
+#if defined(DEBUG_PIN_CORE0_KERNEL) || defined(DEBUG_PIN_CORE1_KERNEL)
+    switch (get_active_core()) {
+    case 0:
+#ifdef DEBUG_PIN_CORE0_KERNEL
+        gpio_out(DEBUG_PIN_CORE0_KERNEL, 0);
+#endif
+        break;
+    case 1:
+#ifdef DEBUG_PIN_CORE1_KERNEL
+        gpio_out(DEBUG_PIN_CORE1_KERNEL, 0);
+#endif
+        break;
+    default:
+        break;
+    }
 #endif
 }
 
@@ -726,20 +770,59 @@ void init(void);
 /* idle_task -- body of idle process */
 static void idle_task(void)
 {
+    int debug_pin = -1;
+    switch (get_active_core()) {
+    case 0:
+#ifdef DEBUG_PIN_CORE0_IDLE
+        debug_pin = DEBUG_PIN_CORE0_IDLE;
+#endif
+        break;
+    case 1:
+#ifdef DEBUG_PIN_CORE1_IDLE
+        debug_pin = DEBUG_PIN_CORE1_IDLE;
+#endif
+        break;
+    default:
+        break;
+    };
     while (1) {
         /* Pick a genuine process to run */
         yield();
+        if (debug_pin != -1) {
+            gpio_out(debug_pin, 1);
+        }
         /* Pairs with `alert` in `make_ready` */
         pause();
+        if (debug_pin != -1) {
+            gpio_out(debug_pin, 0);
+        }
     }
 }    
 
 /* __init -- prepare micro:bian to run scheduling loops */
 void __init(void)
 {
-    /* We will use the LED to indicate contention on the kernel lock - set it up now. */
-    gpio_set_func(GPIO_LED, GPIO_FUNC_SIO);
-    gpio_dir(GPIO_LED, 1);
+#ifdef DEBUG_PIN_CONTENTION
+    gpio_set_func(DEBUG_PIN_CONTENTION, GPIO_FUNC_SIO);
+    gpio_dir(DEBUG_PIN_CONTENTION, 1);
+#endif
+#ifdef DEBUG_PIN_CORE0_KERNEL
+    gpio_set_func(DEBUG_PIN_CORE0_KERNEL, GPIO_FUNC_SIO);
+    gpio_dir(DEBUG_PIN_CORE0_KERNEL, 1);
+#endif
+#ifdef DEBUG_PIN_CORE1_KERNEL
+    gpio_set_func(DEBUG_PIN_CORE1_KERNEL, GPIO_FUNC_SIO);
+    gpio_dir(DEBUG_PIN_CORE1_KERNEL, 1);
+#endif
+#ifdef DEBUG_PIN_CORE0_IDLE
+    gpio_set_func(DEBUG_PIN_CORE0_IDLE, GPIO_FUNC_SIO);
+    gpio_dir(DEBUG_PIN_CORE0_IDLE, 1);
+#endif
+#ifdef DEBUG_PIN_CORE1_IDLE
+    gpio_set_func(DEBUG_PIN_CORE1_IDLE, GPIO_FUNC_SIO);
+    gpio_dir(DEBUG_PIN_CORE1_IDLE, 1);
+#endif
+
     /* Run the main application setup routine. */
     init();
     /* Set all the interrupt handlers to a dummy value so we can panic

@@ -5,6 +5,14 @@
 #include "hardware.h"
 #include <stdarg.h>
 
+#define DEBUG_PIN_IN_SERIAL 9
+
+#ifdef DEBUG_PIN_IN_SERIAL
+#define debug_in_serial(b) gpio_out(DEBUG_PIN_IN_SERIAL, b)
+#else
+#define debug_in_serial(b)
+#endif
+
 #ifdef UBIT
 #define TX USB_TX
 #define RX USB_RX
@@ -203,7 +211,9 @@ static void reply(void) {
 static void queue_char(char ch) {
     while (n_tx == NBUF) {
         // The buffer is full -- wait for a space to appear
+        debug_in_serial(0);
         receive(INTERRUPT, NULL);
+        debug_in_serial(1);
         serial_interrupt();
         reply();
     }
@@ -219,6 +229,12 @@ static void serial_task(int arg) {
     int client, n;
     char ch;
     char *buf;
+
+#ifdef DEBUG_PIN_IN_SERIAL
+    gpio_set_func(DEBUG_PIN_IN_SERIAL, GPIO_FUNC_SIO);
+    gpio_dir(DEBUG_PIN_IN_SERIAL, 1);
+    gpio_out(DEBUG_PIN_IN_SERIAL, 1);
+#endif
 
 #if defined(UBIT)
     UART_ENABLE = UART_ENABLE_Disabled;
@@ -299,7 +315,10 @@ static void serial_task(int arg) {
 #endif
 
     while (1) {
+        debug_in_serial(0);
         receive(ANY, &m);
+        debug_in_serial(1);
+
         client = m.sender;
 
         switch (m.type) {
@@ -327,7 +346,9 @@ static void serial_task(int arg) {
                 if (ch == '\n') queue_char('\r');
                 queue_char(ch);
             }
+            debug_in_serial(0);
             send_msg(client, REPLY);
+            debug_in_serial(1);
             break;
 
         default:
