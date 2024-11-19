@@ -48,6 +48,30 @@ argument to be a macro that expands the a 'position, width' pair. */
 #define USB_TX 0
 #define USB_RX 1
 
+#define BUTTON_A 2
+#define BUTTON_B 3
+
+#define GPIO_26 26
+#define GPIO_27 27
+#define GPIO_28 28
+#define GPIO_29 29
+#define ADC0 26
+#define ADC1 27
+#define ADC2 28
+#define ADC3 29
+#define GPIO_26_ADC0 26
+#define GPIO_27_ADC1 27
+#define GPIO_28_ADC2 28
+#define GPIO_29_ADC3 29
+#define GPIO_VIRT_TS -99
+
+#define MUX_ADC0 0
+#define MUX_ADC1 1
+#define MUX_ADC2 2
+#define MUX_ADC3 3
+#define MUX_TEMP 4
+
+
 /* Exceptions */
 #define SVC_IRQ    -5
 #define PENDSV_IRQ -2
@@ -64,6 +88,15 @@ argument to be a macro that expands the a 'position, width' pair. */
 
 #define N_INTERRUPTS 32
 
+/* 24-bit systick downcount*/
+#define SYST_BASE                       _BASE(0xe000e010)
+#define SYST_CSR                        _REG(unsigned, 0xe000e010)
+#define SYST_CSR_COUNTFLAG   __BIT(16)
+#define SYST_CSR_CLOCKSOURCE __BIT(2)
+#define SYST_CSR_TICKINT     __BIT(1)
+#define SYST_CSR_ENABLE      __BIT(0)
+#define SYST_RVR                        _REG(unsigned, 0xe000e014)
+#define SYST_CVR                        _REG(unsigned, 0xe000e018)
 
 /* System contol block (Cortex-M0+) */
 #define SCB_BASE                        _BASE(0xe000ed00)
@@ -422,6 +455,8 @@ argument to be a macro that expands the a 'position, width' pair. */
 #define CLOCKS_CLK_USB_DIV              _REG(unsigned, 0x40008058)
 #define CLOCKS_CLK_USB_SELECTED         _REG(unsigned, 0x4000805c)
 #define CLOCKS_CLK_ADC_CTRL             _REG(unsigned, 0x40008060)
+#define CLOCKS_CLK_ADC_CTRL_AUXSRC                __FIELD(5,3) 
+#define CLOCKS_CLK_ADC_CTRL_ENABLE                __BIT(11) 
 #define CLOCKS_CLK_ADC_DIV              _REG(unsigned, 0x40008064)
 #define CLOCKS_CLK_ADC_SELECTED         _REG(unsigned, 0x40008068)
 #define CLOCKS_CLK_RTC_CTRL             _REG(unsigned, 0x4000806c)
@@ -494,9 +529,31 @@ argument to be a macro that expands the a 'position, width' pair. */
 /* 4.4.16 */
 #define I2C0_BASE                       _BASE(0x40044000)
 #define I2C0_CON                        _REG(unsigned, 0x40044000)
+#define I2C_CON_MASTER_MODE_ENABLED   __BIT(0)
+#define I2C_CON_SPEED                 __FIELD(1,2)
+#define I2C_CON_SPEED_STANDARD             1
+#define I2C_CON_SPEED_FAST                 2
+#define I2C_CON_SPEED_HIGH                 3
+#define I2C_CON_10BITADDR_SLAVE       __BIT(3)
+#define I2C_CON_10BITADDR_MASTER      __BIT(4)
+#define I2C_CON_RESTART_EN            __BIT(5)
+#define I2C_CON_SLAVE_DISABLE         __BIT(6)
+#define I2C_CON_STOP_DET_IFADDRESSED  __BIT(7)
+#define I2C_CON_TX_EMPTY_CTRL         __BIT(8)
+#define I2C_CON_RX_FIFO_FULL_HLD_CTRL __BIT(9)
 #define I2C0_TAR                        _REG(unsigned, 0x40044004)
 #define I2C0_SAR                        _REG(unsigned, 0x40044008)
 #define I2C0_DATA_CMD                   _REG(unsigned, 0x40044010)
+#define I2C_DATA_CMD_FIRST_DATA_BYTE __BIT(11)
+#define I2C_DATA_CMD_RESTART         __BIT(10)
+#define I2C_DATA_CMD_RESTART_DISABLE 0
+#define I2C_DATA_CMD_RESTART_ENABLE  1
+#define I2C_DATA_CMD_STOP            __BIT(9)
+#define I2C_DATA_CMD_STOP_DISABLE    0
+#define I2C_DATA_CMD_STOP_ENABLE     1
+#define I2C_DATA_CMD_CMD             __BIT(8)
+#define I2C_DATA_CMD_CMD_WRITE       0
+#define I2C_DATA_CMD_CMD_READ        1
 #define I2C0_SS_SCL_HCNT                _REG(unsigned, 0x40044014)
 #define I2C0_SS_SCL_LCNT                _REG(unsigned, 0x40044018)
 #define I2C0_FS_SCL_HCNT                _REG(unsigned, 0x4004401c)
@@ -504,6 +561,12 @@ argument to be a macro that expands the a 'position, width' pair. */
 #define I2C0_INTR_STAT                  _REG(unsigned, 0x4004402c)
 #define I2C0_INTR_MASK                  _REG(unsigned, 0x40044030)
 #define I2C0_RAW_INTR_STAT              _REG(unsigned, 0x40044034)
+#define I2C_RAW_INTR_STAT_TX_EMPTY   __BIT(4)
+#define I2C_RAW_INTR_STAT_R_TX_EMPTY_INACTIVE   0
+#define I2C_RAW_INTR_STAT_R_TX_EMPTY_ACTIVE     1
+#define I2C_RAW_INTR_STAT_STOP_DET  __BIT(9)
+#define I2C_RAW_INTR_STAT_R_STOP_DET_INACTIVE 0
+#define I2C_RAW_INTR_STAT_R_STOP_DET_ACTIVE   1
 #define I2C0_RX_TL                      _REG(unsigned, 0x40044038)
 #define I2C0_TX_TL                      _REG(unsigned, 0x4004403c)
 #define I2C0_CLR_INTR                   _REG(unsigned, 0x40044040)
@@ -658,9 +721,11 @@ argument to be a macro that expands the a 'position, width' pair. */
 #define ADC_BASE                        _BASE(0x4004c000)
 #define ADC_CS                          _REG(unsigned, 0x4004c000)
 #define ADC_CS_EN __BIT(0)
+#define ADC_CS_TS_EN __BIT(1)
 #define ADC_CS_START_ONCE __BIT(2)
 #define ADC_CS_READY __BIT(8)
 #define ADC_CS_ERR __BIT(9)
+#define ADC_CS_AINSEL __FIELD(12,3)
 #define ADC_RESULT                      _REG(unsigned, 0x4004c004)
 #define ADC_FCS                         _REG(unsigned, 0x4004c008)
 #define ADC_FIFO                        _REG(unsigned, 0x4004c00c)
@@ -711,10 +776,31 @@ INLINE void gpio_dir(unsigned pin, unsigned dir) {
     }
 }
 
+/* gpio_analog -- setup pin for analog input */
+INLINE void gpio_analog(unsigned pin) {
+    volatile unsigned *gpio_reg = &PADS_BANK0_GPIO0 + pin;
+    CLR_BIT(*gpio_reg, PADS_GPIO_IE);
+    SET_BIT(*gpio_reg, PADS_GPIO_OD);
+}
+
 /* gpio_connect -- connect pin for input */
 INLINE void gpio_connect(unsigned pin) {
     volatile unsigned *gpio_reg = &PADS_BANK0_GPIO0 + pin;
     SET_BIT(*gpio_reg, PADS_GPIO_IE);
+}
+
+/* gpio_pullup -- pullup enable for pin */
+INLINE void gpio_pullup(unsigned pin) {
+    volatile unsigned *gpio_reg = &PADS_BANK0_GPIO0 + pin;
+    SET_BIT(*gpio_reg, PADS_GPIO_PUE);
+    CLR_BIT(*gpio_reg, PADS_GPIO_PDE);
+}
+
+/* gpio_clear_pulls -- pullup and pulldown disable for pin */
+INLINE void gpio_clear_pulls(unsigned pin) {
+    volatile unsigned *gpio_reg = &PADS_BANK0_GPIO0 + pin;
+    CLR_BIT(*gpio_reg, PADS_GPIO_PUE);
+    CLR_BIT(*gpio_reg, PADS_GPIO_PDE);
 }
 
 /* gpio_drive -- set GPIO drive strength */

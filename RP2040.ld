@@ -30,6 +30,7 @@ SECTIONS {
         PROVIDE(timer3_handler = default_handler);
         PROVIDE(uart0_handler = default_handler);
         PROVIDE(uart1_handler = default_handler);
+        PROVIDE(adc_handler = default_handler);
         PROVIDE(i2c0_handler = default_handler);
         PROVIDE(i2c1_handler = default_handler);
         PROVIDE(rtc_handler = default_handler);

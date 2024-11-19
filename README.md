@@ -21,3 +21,33 @@ process of mounting the Pico as a filesystem and copying the image to it.
 
 There is also a dependency on Python 3 in this process: a Python script is used
 to pad and checksum the stage2 bootloader which is put into the image.
+
+## Picobian 
+
+Progress - wip check in, lots still to do
+
+Focus on Raspi pico but other RP2040 targets like qtpy2040 and xiao2040
+should be ok too so change name back when ready to push to parent.
+
+Have added systick supported timer driver.
+Have added adc polling driver - need to looking into FCS FIFO irq
+Have rudiments of polling i2c0 driver, supports ssd1306 128x32 i2c display by default
+with addition of a single `#define __DISP_64__` should work with 128x64 i2c display, x64 untested.
+ 
+Future direction:
+Looks like linux drivers for the i2c fabric exist in separate
+master and slave versions. So they should provide a guide to getting
+a proper interrupt driven model going for i2c0 and i2c1
+search internet for
+.../linux/drivers/i2c/busses/i2c/i2c-designware-master.c
+.../linux/drivers/i2c/busses/i2c/i2c-designware-slave.c
+
+
+
+Fixup adc driver to use interrupts too
+
+After that spi driver is required.
+May also investigate Serial CDC using tinyusb as the mutex and semaphore 
+primatives appear to be available, have not investigated at all yet.
+
+

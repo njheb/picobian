@@ -14,6 +14,10 @@ static int TIMER_TASK;
 #define TICK 1                  // Helps with faster display update
 #endif
 
+#ifdef PI_PICO
+#define TICK 1                  // initial 1ms systick rate
+#endif
+
 #define MAX_TIMERS 8
 
 /* Millis will overflow in about 46 days, but that's long enough. */
@@ -71,6 +75,7 @@ static void create(int client, int delay, int repeat) {
     timer[i].period = repeat;
 }
 
+#ifndef PI_PICO
 /* timer1_handler -- interrupt handler */
 void timer1_handler(void) {
     // Update the time here so it is accessible to timer_micros
@@ -80,10 +85,15 @@ void timer1_handler(void) {
         interrupt(TIMER_TASK);
     }
 }
-
+#else
+void systick_handler(void) {
+        millis += TICK;
+        interrupt(TIMER_TASK);
+}
+#endif
 static void timer_task(int n) {
     message m;
-
+#ifndef PI_PICO
     /* We use Timer 1 because its 16-bit mode is adequate for a clock
        with up to 1us resolution and 1ms period, leaving the 32-bit
        Timer 0 for other purposes. */
@@ -98,7 +108,13 @@ static void timer_task(int n) {
     TIMER1_START = 1;
     enable_irq(TIMER1_IRQ);
     priority(P_HANDLER);
-
+#else
+    SYST_CSR = 0x0;
+    SYST_RVR = 124999UL;
+SYST_CSR = 0x7; //BIT(SYST_CSR_CLKSOURCE)|BIT(SYST_CSR_TICKINT)|BIT(SYST_CSR_ENABLE);
+//    enable_irq(SYSTICK_IRQ); //make sure we are on core0, do we need to assign number to SYSTICK_IRQ
+    priority(P_HANDLER);
+#endif
     while (1) {
         receive(ANY, &m);
 
@@ -140,7 +156,7 @@ difference of two readings with unsigned subtraction. */
 /* timer_micros -- return microseconds since startup */
 unsigned timer_micros(void) {
     unsigned my_millis, ticks1, ticks2, extra;
-    
+#ifndef PI_PICO
     /* We must allow for the possibility the timer has expired but the
        interrupt has not yet been handled. Worse, the timer expiry
        could happen between looking at the timer and looking at the
@@ -163,6 +179,20 @@ unsigned timer_micros(void) {
     if (extra && ticks1 <= ticks2) my_millis += TICK;
 
     return 1000 * my_millis + ticks1;
+
+#else
+    intr_disable();
+    ticks1 = SYST_CVR & 0x00ffffff; //125000 counts in 1ms
+    my_millis = millis;
+    ticks2 = SYST_CVR & 0x00ffffff;
+    intr_enable();
+    extra = (125000 - ticks2)/125;
+    if (ticks1<ticks2) extra += 1000;
+
+   //need to work out how to handle missed tick situation
+    return 1000 * my_millis + extra;
+
+#endif
 }
 
 /* timer_delay -- one-shot delay */

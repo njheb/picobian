@@ -7,7 +7,7 @@
 
 void read_line(char *buf) {
     char *p = buf;
-
+    
     for (;;) {
         char ch = serial_getc();
         if (ch == '\n') break;
@@ -18,9 +18,9 @@ void read_line(char *buf) {
 }
 
 void echo_task(int n) {
-    char line[128]; //potential for stack smashing here
+    char line[128];
 
-    printf("Hello " __DATE__ " " __TIME__ "\n");
+    printf("Hello\n");
 
     while (1) {
         read_line(line);

@@ -3,8 +3,22 @@
 
 include config.mk
 
-EXAMPLES = ex-level.bin ex-valentine.bin ex-echo.bin ex-remote.bin \
-	ex-timeout.bin
+#EXAMPLES = ex-level.bin ex-valentine.bin ex-echo.bin ex-remote.bin \
+#	ex-timeout.bin
+EXAMPLES = ex-echo.bin \
+	ex-timeout.bin \
+	ex-adc.bin
+
+//TARGET=ex-i2cblocking
+TARGET=ex-adc
+
+mon:
+	minicom -D /dev/ttyACM0 -b 9600
+
+pair: $(TARGET).uf2 $(TARGET).elf
+
+upload: pair
+	cp $(TARGET).uf2 /media/pi/RPI-RP2/
 
 all: microbian.a startup.o
 
@@ -21,7 +35,8 @@ AR = arm-none-eabi-ar
 vpath %.c $(BOARD)
 
 #DRIVERS = timer.o serial.o i2c.o radio.o display.o adc.o
-DRIVERS = serial.o
+#DRIVERS = timer.o serial.o 
+DRIVERS = timer.o serial.o oled-ssd1306.o adc.o
 
 MICROBIAN = microbian.o $(MPX).o $(DRIVERS) lib.o
 
@@ -55,7 +70,7 @@ ex-unpadded-%.bin: ex-%.elf
 	./hwdesc $< >$@
 
 clean: force
-	rm -f microbian.a *.o *.elf *.bin *.map $(BOARD)/*.o $(BOARD)/*.bin uf2
+	rm -f microbian.a *.o *.elf *.bin *.map $(BOARD)/*.o $(BOARD)/*.bin uf2 *.uf2
 
 force:
 

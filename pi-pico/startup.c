@@ -32,7 +32,7 @@ void *memmove(void *dest, const void *src, unsigned n)
     }
     return dest;
 }
-    
+
 /* memset -- set n bytes of dest to byte x */
 void *memset(void *dest, unsigned x, unsigned n)
 {
@@ -92,9 +92,10 @@ extern unsigned char __bss_start[], __bss_end[], __stack[];
 void __reset(void)
 {
     int bss_size = __bss_end - __bss_start;
-    memset(__bss_start, 0, bss_size);
 
-#define WANT_RESET (BIT(RESET_IO_BANK0) | BIT(RESET_PADS_BANK0) | BIT(RESET_PLL_SYS) | BIT(RESET_TIMER))
+
+/*don't reset ADC here as it won't startup without it's clocks being setup*/
+#define WANT_RESET (BIT(RESET_IO_BANK0) | BIT(RESET_PADS_BANK0) | BIT(RESET_PLL_SYS) | BIT(RESET_TIMER) | BIT(RESET_I2C0) )
     RESETS_RESET = 0xffffffff;
     RESETS_RESET &= ~(unsigned)WANT_RESET;
     while (~RESETS_RESET_DONE & WANT_RESET);
@@ -105,7 +106,7 @@ void __reset(void)
     SET_BIT(WATCHDOG_TICK, WATCHDOG_TICK_ENABLE);
 
     /* Enable the crystal oscillator (XOSC) */
-    _Static_assert(XOSC_HZ == 12000000);
+    _Static_assert(XOSC_HZ == 12000000,"SA1");
     XOSC_STARTUP = 48; /* sufficient startup delay */
     XOSC_CTRL = 0xaa0 | (0xfab << 12); /* frequency range 1-15MHz, enable */
     while (!(XOSC_STATUS >> 31)) {
@@ -113,13 +114,12 @@ void __reset(void)
     }
 
     /* Configure PLL SYS to be driven by XOSC at 125MHz */
-    _Static_assert(XOSC_HZ == 12000000 && SYS_CLK_HZ == 125000000);
+    _Static_assert(XOSC_HZ == 12000000 && SYS_CLK_HZ == 125000000,"SA2");
     PLL_SYS_PWR = 0xffffffff; /* disable PLL SYS */
     PLL_SYS_CS = 1; /* REFDIV = 1, BYPASS = 0 */
     PLL_SYS_FBDIV_INT = 125;
     PLL_SYS_PRIM = (2 << 16) | (6 << 12); /* post-divider = 2*6 = 12 */
     PLL_SYS_PWR = 0; /* enable PLL SYS */
-
     /* Drive CLK_REF by XOSC and CLK_SYS by PLL SYS. That way, we can also
      * disable the on-chip ring oscillator (ROSC) to save power. */
     CLOCKS_CLK_REF_CTRL = 2; /* CLK_REF SRC = xosc_clksrc */
@@ -135,7 +135,16 @@ void __reset(void)
 
     /* CLK_PERI is set up with aux src 'clk_sys' on reset, so it is already
      * ready to go - we just need to enable it. */
+
     CLOCKS_CLK_PERI_CTRL = 1 << 11; /* ENABLE */
+
+    SET_FIELD(CLOCKS_CLK_ADC_CTRL, CLOCKS_CLK_ADC_CTRL_AUXSRC, 3);
+    SET_BIT(CLOCKS_CLK_ADC_CTRL, CLOCKS_CLK_ADC_CTRL_ENABLE);
+
+    // Reset ADC after clocks are running
+    reset_subsystem(RESET_ADC); 
+
+    memset(__bss_start, 0, bss_size);
 
     /* Initialization code must be run before other cores start. */
     __init();
@@ -224,6 +233,8 @@ void i2c0_handler(void);
 void i2c1_handler(void);
 void rtc_handler(void);
 
+void adc_handler(void);
+
 /* This vector table is placed at address 0 in the flash by directives
 in the linker script. */
 
@@ -268,7 +279,7 @@ void *__vectors[] __attribute((section(".vectors"))) = {
     0,
     uart0_handler,               /* 20 */
     uart1_handler,
-    0,
+    adc_handler,
     i2c0_handler,
     i2c1_handler,               /* 24 */
     rtc_handler,

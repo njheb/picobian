@@ -31,9 +31,11 @@ static void adc_task(int dummy) {
     ADC_INTEN = BIT(ADC_INT_END) | BIT(ADC_INT_CALDONE);
 #endif
 
+#ifndef PI_PICO
     connect(ADC_IRQ);
     enable_irq(ADC_IRQ);
-    
+#endif
+ 
 #ifdef UBIT_V2
     // Run a calibration cycle to set zero point
     ADC_ENABLE = 1;
@@ -75,13 +77,38 @@ static void adc_task(int dummy) {
         assert(ADC_RESULT.AMOUNT == 1);
         ADC_END = 0;
         ADC_ENABLE = 0;
-        
+
         // Result can still be slightly negative even after calibration
         if (result < 0) result = 0;
-#endif        
-        
+#endif
+
+#ifdef PI_PICO
+//not sorted out FIFO interrupt FCS mechanism yet so just yield() from busy 
+     //chan is pin or virtual pin if temperature sensor
+      //ADC_CS should be 0 when we enter here
+      SET_FIELD(ADC_CS, ADC_CS_AINSEL, chan);
+      SET_BIT(ADC_CS, ADC_CS_EN);
+
+      SET_BIT(ADC_CS, ADC_CS_START_ONCE);
+      while (GET_BIT(ADC_CS, ADC_CS_READY) == 0)
+      {
+         yield();
+         if (GET_BIT(ADC_CS, ADC_CS_ERR) == 1)
+         {//handle error here
+          //for now just break;
+             break;
+         }
+      }
+      result = ADC_RESULT;
+
+      ADC_CS = 0;
+
+#endif
+
+#ifndef PI_PICO
         clear_pending(ADC_IRQ);
         enable_irq(ADC_IRQ);
+#endif
 
         send_int(client, REPLY, result);
     }
@@ -94,6 +121,14 @@ static const int chantab[] = {
 #endif
 #ifdef UBIT_V2
     PAD0, 0, PAD1, 1, PAD2, 2, PAD3, 7, PAD4, 4, PAD10, 6,
+#endif
+#ifdef PI_PICO
+//ADCT is a special value
+    GPIO_26_ADC0, MUX_ADC0,
+    GPIO_27_ADC1, MUX_ADC1,
+    GPIO_28_ADC2, MUX_ADC2,
+    GPIO_29_ADC3, MUX_ADC3,
+    GPIO_VIRT_TS, MUX_TEMP,
 #endif
     0
 };
@@ -112,9 +147,50 @@ int adc_reading(int pin) {
     if (chan < 0)
         panic("Can't use pin %d for ADC", pin);
 
+#ifdef PI_PICO
+      unsigned char remember_ie;
+      unsigned char remember_od;
+
+      ADC_CS = 0;
+
+      if (chan == GPIO_VIRT_TS)
+      {
+         SET_BIT(ADC_CS, ADC_CS_TS_EN);
+      }
+      else
+      {
+          volatile unsigned *gpio_reg = &PADS_BANK0_GPIO0 + pin;
+          remember_ie = GET_BIT(*gpio_reg, PADS_GPIO_IE);
+          remember_od = GET_BIT(*gpio_reg, PADS_GPIO_OD);
+          CLR_BIT(*gpio_reg, PADS_GPIO_IE);
+          SET_BIT(*gpio_reg, PADS_GPIO_OD);
+      }
+#endif
+
     m.type = REQUEST;
     m.int1 = chan;
     sendrec(ADC, &m);
+
+#ifdef PI_PICO
+      if (chan == GPIO_VIRT_TS)
+      {
+         CLR_BIT(ADC_CS, ADC_CS_TS_EN);
+      }
+      else
+      {
+          volatile unsigned *gpio_reg = &PADS_BANK0_GPIO0 + pin;
+          if (remember_ie == 0)
+             CLR_BIT(*gpio_reg, PADS_GPIO_IE);
+          else
+             SET_BIT(*gpio_reg, PADS_GPIO_IE);
+
+          if (remember_od == 0)
+             CLR_BIT(*gpio_reg, PADS_GPIO_OD);
+          else
+             SET_BIT(*gpio_reg, PADS_GPIO_OD);
+      }
+#endif
+
     return m.int1;
 }
 
