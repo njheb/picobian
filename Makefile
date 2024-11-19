@@ -9,8 +9,8 @@ EXAMPLES = ex-echo.bin \
 	ex-timeout.bin \
 	ex-adc.bin
 
-//TARGET=ex-i2cblocking
-TARGET=ex-adc
+TARGET=ex-i2c_blocking
+//TARGET=ex-adc
 
 mon:
 	minicom -D /dev/ttyACM0 -b 9600
