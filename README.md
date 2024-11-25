@@ -26,11 +26,24 @@ to pad and checksum the stage2 bootloader which is put into the image.
 
 Progress - wip check in, lots still to do
 
+Examples:
+
+`ex-timeout.c` added BUTTON_A and BUTTON_B, note there are a block of debug pins following,
+shows how to configure internal pull-up and configure input to use with momentary switch to ground.
+
+`ex-adc.c` uses adc driver to report values from a potentiometer.
+
+`ex_i2c_blocking.c` just enough code for an i2c0 oled display, not using a proper driver, using pins out of the way of those debug pins (should get around to documenting mlugg's debug pins better than this hint).
+
+
+
 Focus on Raspi pico but other RP2040 targets like qtpy2040 and xiao2040
 should be ok too so change name back when ready to push to parent.
 
 Have added systick supported timer driver.
+
 Have added adc polling driver - need to looking into FCS FIFO irq
+
 Have rudiments of polling i2c0 driver, supports ssd1306 128x32 i2c display by default
 with addition of a single `#define __DISP_64__` should work with 128x64 i2c display, x64 untested.
  
@@ -38,16 +51,20 @@ Future direction:
 Looks like linux drivers for the i2c fabric exist in separate
 master and slave versions. So they should provide a guide to getting
 a proper interrupt driven model going for i2c0 and i2c1
-search internet for
-.../linux/drivers/i2c/busses/i2c/i2c-designware-master.c
-.../linux/drivers/i2c/busses/i2c/i2c-designware-slave.c
+
+search internet for:
+
+`.../linux/drivers/i2c/busses/i2c/i2c-designware-master.c`
+
+`.../linux/drivers/i2c/busses/i2c/i2c-designware-slave.c`
 
 
 
-Fixup adc driver to use interrupts too
+Fixup adc driver to use interrupts to.
 
 After that spi driver is required.
-May also investigate Serial CDC using tinyusb as the mutex and semaphore 
-primatives appear to be available, have not investigated at all yet.
+
+May also investigate Serial CDC using tinyusb however the mutex and semaphore 
+primatives will need to be added, have not investigated adding to RP2040.
 
 
